@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<style type="text/css">
+    canvas { background: lightgray; }
+</style>
+
+<p>
+<button id = "Button1">Increase Z</button>
+<button id = "Button2">Decrease Z</button>
+<button id = "Button3">Increase D</button>
+<button id = "Button4">Decrease D</button>
+</p>
+<p>
+<button id = "Button5">Increase theta</button>
+<button id = "Button6">Decrease theta</button>
+<button id = "Button7">Increase phi</button>
+<button id = "Button8">Decrease phi</button>
+</p>
+
+<p>
+      <div class="col-md-6">
+        <form class="form-inline">
+          <div class="form-group">
+            <label for="gc">First of all, load an OBJ file --></label>
+            <input id='input1' type='file' onchange="gc_openFile(event)" />
+          </div>
+        </form>
+       </div>
+</p>
+
+<body>
+<canvas id="mycanvas" width="512" height="512">
+    Oops ... your browser doesn't support the HTML5 canvas element
+</canvas>
+</body>
+
+ <script type="text/javascript" src="resources/mesh_utils.js"></script>
+ <script type="text/javascript" src="resources/glm_utils.js"></script>
+ <script type="text/javascript" src="persp_obj_file_face.js"></script>
+
+</html>
