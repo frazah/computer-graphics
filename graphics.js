@@ -10,7 +10,10 @@ function initWebGL() {
 
     // Setup
     setupGraphics(gl);
-    
+
+    // Setup GUI
+    setupGUI();
+
     // Start rendering loop
     requestAnimationFrame(() => renderLoop(gl));
 }
@@ -22,7 +25,7 @@ function renderLoop(gl) {
 
     // Render scene
     // ...
-    
+
     // Update animation and interactions
     // ...
 
