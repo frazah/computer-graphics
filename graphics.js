@@ -7,8 +7,9 @@ function initWebGL() {
         console.error('WebGL not supported');
         return;
     }
+    
     // Start rendering loop
-    requestAnimationFrame(renderLoop(gl));
+    requestAnimationFrame(() => renderLoop(gl));
 }
 
 // Main rendering loop
@@ -19,16 +20,14 @@ function renderLoop(gl) {
     // Update animation and interactions
     // ...
 
-    console.log("ciao")
-
     // Set clear color to black, fully opaque
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clearColor(1.0, 1.0, 1.0, 1.0);
 
     // Clear the color buffer with specified clear color
     gl.clear(gl.COLOR_BUFFER_BIT);
 
     // Request next frame
-    requestAnimationFrame(renderLoop);
+    requestAnimationFrame(() => renderLoop(gl));
 }
 
 // Entry point
