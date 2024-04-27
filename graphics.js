@@ -1,7 +1,7 @@
 // Initialize WebGL context and setup scene
 function initWebGL() {
     const canvas = document.getElementById('webgl-canvas');
-    const gl = canvas.getContext('webgl');
+    const gl = canvas.getContext('webgl2');
 
     if (!gl) {
         console.error('WebGL not supported');
@@ -9,19 +9,24 @@ function initWebGL() {
     }
 
     // Setup
-    setupGraphics(gl);
+    var program = setupGraphics(gl);
+    var colorLocation = gl.getUniformLocation(program, "u_color");
 
     // Setup GUI
     setupGUI();
 
     // Start rendering loop
-    requestAnimationFrame(() => renderLoop(gl));
+    requestAnimationFrame(() => renderLoop(gl, colorLocation));
 }
 
+
 // Main rendering loop
-function renderLoop(gl) {
+function renderLoop(gl, colorLocation) {
     // Resize canvas to fill window if necessary
     resizeCanvas();
+    //webglUtils.resizeCanvasToDisplaySize(gl.canvas);
+    //gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
 
     // Render scene
     // ...
@@ -29,14 +34,19 @@ function renderLoop(gl) {
     // Update animation and interactions
     // ...
 
-    // Set clear color to black, fully opaque
-    gl.clearColor(0.0, 0.0, 0.0, 1);
-
-    // Clear the color buffer with specified clear color
+    // Clear the canvas
+    gl.clearColor(0, 0, 0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    // compute 3 vertices for 1 triangle
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    
+    gl.uniform4f(colorLocation, Math.random(), Math.random(), Math.random(), 1);
+
+    var primitiveType = gl.TRIANGLES;
+    var offset = 0;
+    var count = 3;
+    gl.drawArrays(primitiveType, offset, count);
+
+
 
 
     // Request next frame
