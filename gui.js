@@ -1,4 +1,4 @@
-function setupGUI() {
+function setupGUI(fieldOfView, cameraAngle) {
     // Creating a GUI
     var gui = new dat.GUI({ autoPlace: false });
 
@@ -13,8 +13,9 @@ function setupGUI() {
     gui.add(person, 'name');
 
     // Add a number controller slider.
-    var person = { age: 45 };
-    gui.add(person, 'age', 0, 100);
+    var camera = { fieldOfView: fieldOfView, cameraAngle: cameraAngle };
+    gui.add(camera, 'fieldOfView', 0, 180, 10);
+    gui.add(camera, 'cameraAngle', 0, 360, 10);
 
     var palette = {
         color: [0, 128, 255], // RGB array

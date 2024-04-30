@@ -1,3 +1,5 @@
+@import url("https://webgl2fundamentals.org/webgl/resources/webgl-tutorials.css");
+
 body, html {
     margin: 0;
     padding: 0;
@@ -7,6 +9,8 @@ body, html {
 
 canvas {
     display: block; 
+    width: 100vw;
+    height: 100vh;
 }
 
 #gui {
