@@ -19,12 +19,48 @@ async function main() {
     const meshProgramInfo = twgl.createProgramInfo(gl, [vs, fs]);
 
     //const response = await fetch('https://webgl2fundamentals.org/webgl/resources/models/book-vertex-chameleon-study/book.obj');
-    const response = await fetch('resources/models/moon/moon.obj');
 
+    const objHref = 'resources/models/moon/moon.obj';
+    const response = await fetch(objHref);
     const text = await response.text();
     const obj = parseOBJ(text);
+    const baseHref = new URL(objHref, window.location.href);
+    const matTexts = await Promise.all(obj.materialLibs.map(async filename => {
+        const matHref = new URL(filename, baseHref).href;
+        const response = await fetch(matHref);
+        return await response.text();
+    }));
+    const materials = parseMTL(matTexts.join('\n'));
 
-    const parts = obj.geometries.map(({ data }) => {
+    const textures = {
+        defaultWhite: twgl.createTexture(gl, { src: [255, 255, 255, 255] }),
+    };
+
+    const defaultMaterial = {
+        diffuse: [1, 1, 1],
+        diffuseMap: textures.defaultWhite,
+        ambient: [0, 0, 0],
+        specular: [1, 1, 1],
+        shininess: 400,
+        opacity: 1,
+    };
+
+    // load texture for materials
+    for (const material of Object.values(materials)) {
+        Object.entries(material)
+            .filter(([key]) => key.endsWith('Map'))
+            .forEach(([key, filename]) => {
+                let texture = textures[filename];
+                if (!texture) {
+                    const textureHref = new URL(filename, baseHref).href;
+                    texture = twgl.createTexture(gl, { src: textureHref, flipY: true });
+                    textures[filename] = texture;
+                }
+                material[key] = texture;
+            });
+    }
+
+    const parts = obj.geometries.map(({ material, data }) => {
         // Because data is just named arrays like this
         //
         // {
@@ -54,7 +90,8 @@ async function main() {
         const vao = twgl.createVAOFromBufferInfo(gl, meshProgramInfo, bufferInfo);
         return {
             material: {
-                u_diffuse: [1, 1, 1, 1],
+                ...defaultMaterial,
+                ...materials[material],
             },
             bufferInfo,
             vao,
@@ -86,20 +123,36 @@ async function main() {
     const zNear = radius / 100;
     const zFar = radius * 3;
 
-    function degToRad(deg) {
-        return deg * Math.PI / 180;
-    }
-
-    function radToDeg(r) {
-        return r * 180 / Math.PI;
-    }
-
 
     // First let's make some variables
     // to hold the translation,
     var fieldOfViewRadians = degToRad(60);
     var cameraAngleRadians = degToRad(0);
     var cam1OrthoUnits = 10;
+
+    function setupGUI(cameraAngleRadians, fieldOfViewRadians, cam1OrthoUnits) {
+        webglLessonsUI.setupSlider("#cameraAngle", { value: radToDeg(cameraAngleRadians), slide: updateCameraAngle, min: -360, max: 360 });
+        webglLessonsUI.setupSlider("#fieldOfView", { value: radToDeg(fieldOfViewRadians), slide: updateFieldOfView, min: 1, max: 179 });
+        webglLessonsUI.setupSlider("#camOrtho", { value: cam1OrthoUnits, slide: updateOrtho, min: 1, max: 50 });
+    }
+
+    function updateFieldOfView(event, ui) {
+        fieldOfViewRadians = degToRad(ui.value);
+        //drawScene();
+    }
+
+    function updateCameraAngle(event, ui) {
+        cameraAngleRadians = degToRad(ui.value);
+        //drawScene();
+    }
+
+    function updateOrtho(event, ui) {
+        cam1OrthoUnits = ui.value;
+        //drawScene();
+    }
+
+    // Setup a ui.
+    setupGUI(fieldOfViewRadians, cameraAngleRadians, cam1OrthoUnits);
 
 
     function render(time) {
@@ -169,8 +222,7 @@ async function main() {
                 // calls gl.uniform
                 twgl.setUniforms(meshProgramInfo, {
                     u_world,
-                    u_diffuse: material.u_diffuse,
-                });
+                }, material);
 
                 // calls gl.drawArrays or gl.drawElements
                 twgl.drawBufferInfo(gl, bufferInfo);
