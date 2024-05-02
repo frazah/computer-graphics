@@ -220,8 +220,8 @@ async function main() {
     // compiles and links the shaders, looks up attribute and uniform locations
     const meshProgramInfo = twgl.createProgramInfo(gl, [vs, fs]);
 
-    const response = await fetch('https://webgl2fundamentals.org/webgl/resources/models/book-vertex-chameleon-study/book.obj');
-    //const response = await fetch('resources/models/moon.obj');
+    //const response = await fetch('https://webgl2fundamentals.org/webgl/resources/models/book-vertex-chameleon-study/book.obj');
+    const response = await fetch('resources/models/moon/moon.obj');
 
     const text = await response.text();
     const obj = parseOBJ(text);
@@ -324,10 +324,14 @@ async function main() {
     // to hold the translation,
     var fieldOfViewRadians = degToRad(60);
     var cameraAngleRadians = degToRad(0);
+    var cam1OrthoUnits = 10;
 
     // Setup a ui.
     webglLessonsUI.setupSlider("#cameraAngle", { value: radToDeg(cameraAngleRadians), slide: updateCameraAngle, min: -360, max: 360 });
     webglLessonsUI.setupSlider("#fieldOfView", { value: radToDeg(fieldOfViewRadians), slide: updateFieldOfView, min: 1, max: 179 });
+    webglLessonsUI.setupSlider("#camOrtho", { value: fieldOfViewRadians, slide:  updateOrtho, min: 1, max: 50 });
+
+
 
     function updateFieldOfView(event, ui) {
         fieldOfViewRadians = degToRad(ui.value);
@@ -339,11 +343,16 @@ async function main() {
         //drawScene();
     }
 
+    function updateOrtho(event, ui) {
+        cam1OrthoUnits = ui.value;
+        //drawScene();
+    }
+
 
     function render(time) {
-        time *= 0.001;  // convert to seconds
+        time *= 0.0005;  // convert to seconds
 
-        var numObjects = 5;
+        var numObjects = 1;
 
         twgl.resizeCanvasToDisplaySize(gl.canvas);
         gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
@@ -351,7 +360,23 @@ async function main() {
 
         //const fieldOfViewRadians = degToRad(60);
         const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
-        const projection = m4.perspective(fieldOfViewRadians, aspect, zNear, zFar);
+
+        // Orthographic camera 
+        var cam1Ortho = true;
+
+        var projection = m4.perspective(fieldOfViewRadians, aspect, zNear, zFar);
+
+        if (cam1Ortho) {
+            projection = m4.orthographic(
+                -cam1OrthoUnits * aspect,  // left
+                cam1OrthoUnits * aspect,  // right
+                -cam1OrthoUnits,           // bottom
+                cam1OrthoUnits,           // top
+                zNear,
+                zFar);
+        }
+
+
 
         const up = [0, 1, 0];
         // Compute the camera's matrix using look at.
@@ -370,19 +395,19 @@ async function main() {
 
         gl.useProgram(meshProgramInfo.program);
 
-        //for (let i = 0; i < numObjects; ++i) {
-            // calls gl.uniform
-            twgl.setUniforms(meshProgramInfo, sharedUniforms);
+        // calls gl.uniform
+        twgl.setUniforms(meshProgramInfo, sharedUniforms);
 
+        for (let i = 0; i < numObjects; ++i) {
             // compute the world matrix once since all parts
             // are at the same space.
-            var angle = 1 * Math.PI * 2 / numObjects;
+            var angle = i * Math.PI * 2 / numObjects;
             var x = Math.cos(angle) * radius;
             var z = Math.sin(angle) * radius;
             //let u_world = m4.yRotation(time);
             let u_world = m4.yRotation(time);
-            u_world = m4.translate(u_world, ...objOffset);
-            //u_world = m4.translate(u_world, x, 0, z);
+            //u_world = m4.translate(u_world, ...objOffset);
+            u_world = m4.translate(u_world, x, 0, z);
 
             for (const { bufferInfo, vao, material } of parts) {
                 // set the attributes for this part.
@@ -397,7 +422,7 @@ async function main() {
             }
 
             requestAnimationFrame(render);
-        //}
+        }
     }
     requestAnimationFrame(render);
 }
