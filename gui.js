@@ -1,3 +1,28 @@
+    // Setup a ui.
+    //setupGUI();
+    webglLessonsUI.setupSlider("#cameraAngle", { value: radToDeg(cameraAngleRadians), slide: updateCameraAngle, min: -360, max: 360 });
+    webglLessonsUI.setupSlider("#fieldOfView", { value: radToDeg(fieldOfViewRadians), slide: updateFieldOfView, min: 1, max: 179 });
+    webglLessonsUI.setupSlider("#camOrtho", { value: fieldOfViewRadians, slide:  updateOrtho, min: 1, max: 50 });
+
+
+    function updateFieldOfView(event, ui) {
+        fieldOfViewRadians = degToRad(ui.value);
+        //drawScene();
+    }
+
+    function updateCameraAngle(event, ui) {
+        cameraAngleRadians = degToRad(ui.value);
+        //drawScene();
+    }
+
+    function updateOrtho(event, ui) {
+        cam1OrthoUnits = ui.value;
+        //drawScene();
+    }
+
+
+
+/*
 function setupGUI(fieldOfView, cameraAngle) {
     // Creating a GUI
     var gui = new dat.GUI({ autoPlace: false });
@@ -31,18 +56,5 @@ function setupGUI(fieldOfView, cameraAngle) {
 
     gui.add(state, 'options', ['Option 1', 'Option 2', 'Option 3']);
 
-    /*
-    gui.add(state, "points", 3, 24, 1).listen();
-    setInterval(() => {
-        ++state.points;
-
-        if (state.points > 24) {
-            state.points = 3;
-        }
-    }, 100);
-
-    gui.add(state, "points", 3, 24, 1).onChange((value) => {
-        console.log(value);
-    });
-    */
 }
+*/

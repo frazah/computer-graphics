@@ -1,162 +1,185 @@
-function main() {
+"use strict";
+
+async function main() {
     // Get A WebGL context
     /** @type {HTMLCanvasElement} */
-    var canvas = document.querySelector("#canvas");
-    var gl = canvas.getContext("webgl2");
+    const canvas = document.querySelector("#canvas");
+    const gl = canvas.getContext("webgl2");
     if (!gl) {
         return;
     }
 
-    // Use our boilerplate utils to compile the shaders and link into a program
-    var program = webglUtils.createProgramFromSources(gl,
-        [vertexShaderSource, fragmentShaderSource]);
+    // Tell the twgl to match position with a_position etc..
+    twgl.setAttributePrefix("a_");
 
-    // look up where the vertex data needs to go.
-    var positionAttributeLocation = gl.getAttribLocation(program, "a_position");
-    var colorAttributeLocation = gl.getAttribLocation(program, "a_color");
+    const vs = vertexShaderSource;;
+    const fs = fragmentShaderSource;
 
-    // look up uniform locations
-    var matrixLocation = gl.getUniformLocation(program, "u_matrix");
+    // compiles and links the shaders, looks up attribute and uniform locations
+    const meshProgramInfo = twgl.createProgramInfo(gl, [vs, fs]);
 
-    // Create a buffer
-    var positionBuffer = gl.createBuffer();
+    //const response = await fetch('https://webgl2fundamentals.org/webgl/resources/models/book-vertex-chameleon-study/book.obj');
+    const response = await fetch('resources/models/moon/moon.obj');
 
-    // Create a vertex array object (attribute state)
-    var vao = gl.createVertexArray();
+    const text = await response.text();
+    const obj = parseOBJ(text);
 
-    // and make it the one we're currently working with
-    gl.bindVertexArray(vao);
+    const parts = obj.geometries.map(({ data }) => {
+        // Because data is just named arrays like this
+        //
+        // {
+        //   position: [...],
+        //   texcoord: [...],
+        //   normal: [...],
+        // }
+        //
+        // and because those names match the attributes in our vertex
+        // shader we can pass it directly into `createBufferInfoFromArrays`
+        // from the article "less code more fun".
 
-    // Turn on the attribute
-    gl.enableVertexAttribArray(positionAttributeLocation);
+        if (data.color) {
+            if (data.position.length === data.color.length) {
+                // it's 3. The our helper library assumes 4 so we need
+                // to tell it there are only 3.
+                data.color = { numComponents: 3, data: data.color };
+            }
+        } else {
+            // there are no vertex colors so just use constant white
+            data.color = { value: [1, 1, 1, 1] };
+        }
 
-    // Bind it to ARRAY_BUFFER (think of it as ARRAY_BUFFER = positionBuffer)
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    // Set Geometry.
-    //setGeometry(gl);
-    setSphereGeometry(gl);
+        // create a buffer for each array by calling
+        // gl.createBuffer, gl.bindBuffer, gl.bufferData
+        const bufferInfo = twgl.createBufferInfoFromArrays(gl, data);
+        const vao = twgl.createVAOFromBufferInfo(gl, meshProgramInfo, bufferInfo);
+        return {
+            material: {
+                u_diffuse: [1, 1, 1, 1],
+            },
+            bufferInfo,
+            vao,
+        };
+    });
 
-    // Tell the attribute how to get data out of positionBuffer (ARRAY_BUFFER)
-    var size = 3;          // 3 components per iteration
-    var type = gl.FLOAT;   // the data is 32bit floats
-    var normalize = false; // don't normalize the data
-    var stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next position
-    var offset = 0;        // start at the beginning of the buffer
-    gl.vertexAttribPointer(
-        positionAttributeLocation, size, type, normalize, stride, offset);
 
-    // create the color buffer, make it the current ARRAY_BUFFER
-    // and copy in the color values
-    var colorBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-    setColors(gl);
+    const extents = getGeometriesExtents(obj.geometries);
+    const range = m4.subtractVectors(extents.max, extents.min);
 
-    // Turn on the attribute
-    gl.enableVertexAttribArray(colorAttributeLocation);
+    // amount to move the object so its center is at the origin
+    const objOffset = m4.scaleVector(
+        m4.addVectors(
+            extents.min,
+            m4.scaleVector(range, 0.5)),
+        -1);
+    const cameraTarget = [0, 0, 0];
 
-    // Tell the attribute how to get data out of colorBuffer (ARRAY_BUFFER)
-    var size = 3;          // 3 components per iteration
-    var type = gl.UNSIGNED_BYTE;   // the data is 8bit unsigned bytes
-    var normalize = true;  // convert from 0-255 to 0.0-1.0
-    var stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next color
-    var offset = 0;        // start at the beginning of the buffer
-    gl.vertexAttribPointer(
-        colorAttributeLocation, size, type, normalize, stride, offset);
+    // figure out how far away to move the camera so we can likely
+    // see the object.
+    const radius = m4.length(range) * 1.2;
+    const cameraPosition = m4.addVectors(cameraTarget, [
+        0,
+        0,
+        radius,
+    ]);
+    // Set zNear and zFar to something hopefully appropriate
+    // for the size of this object.
+    const zNear = radius / 100;
+    const zFar = radius * 3;
 
+    function degToRad(deg) {
+        return deg * Math.PI / 180;
+    }
 
     function radToDeg(r) {
         return r * 180 / Math.PI;
     }
 
-    function degToRad(d) {
-        return d * Math.PI / 180;
-    }
 
     // First let's make some variables
     // to hold the translation,
     var fieldOfViewRadians = degToRad(60);
     var cameraAngleRadians = degToRad(0);
-
-    // Setup a ui.
-    webglLessonsUI.setupSlider("#cameraAngle", { value: radToDeg(cameraAngleRadians), slide: updateCameraAngle, min: -360, max: 360 });
-    webglLessonsUI.setupSlider("#fieldOfView", { value: radToDeg(fieldOfViewRadians), slide: updateFieldOfView, min: 1, max: 179 });
-
-    function updateFieldOfView(event, ui) {
-        fieldOfViewRadians = degToRad(ui.value);
-        drawScene();
-    }
-
-    function updateCameraAngle(event, ui) {
-        cameraAngleRadians = degToRad(ui.value);
-        drawScene();
-    }
-    
-    drawScene();
+    var cam1OrthoUnits = 10;
 
 
-    // Draw the scene.
-    function drawScene() {
-        var numFs = 5;
-        var radius = 200;
+    function render(time) {
+        time *= 0.001;  // convert to seconds
 
-        webglUtils.resizeCanvasToDisplaySize(gl.canvas);
+        var numObjects = 1;
 
-        // Tell WebGL how to convert from clip space to pixels
+        twgl.resizeCanvasToDisplaySize(gl.canvas);
         gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-
-        // Clear the canvas
-        gl.clearColor(0, 0, 0, 0);
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-        // turn on depth testing
         gl.enable(gl.DEPTH_TEST);
 
-        // tell webgl to cull faces
-        gl.enable(gl.CULL_FACE);
+        //const fieldOfViewRadians = degToRad(60);
+        const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
 
-        // Tell it to use our program (pair of shaders)
-        gl.useProgram(program);
+        // Orthographic camera 
+        var cam1Ortho = false;
 
-        // Bind the attribute/buffer set we want.
-        gl.bindVertexArray(vao);
+        var projection = m4.perspective(fieldOfViewRadians, aspect, zNear, zFar);
 
-        // Compute the matrix
-        var aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
-        var zNear = 1;
-        var zFar = 2000;
-        var projectionMatrix = m4.perspective(fieldOfViewRadians, aspect, zNear, zFar);
+        if (cam1Ortho) {
+            projection = m4.orthographic(
+                -cam1OrthoUnits * aspect,  // left
+                cam1OrthoUnits * aspect,  // right
+                -cam1OrthoUnits,           // bottom
+                cam1OrthoUnits,           // top
+                zNear,
+                zFar);
+        }
 
-        // Compute the camera's matrix
-        var cameraMatrix = m4.yRotation(cameraAngleRadians);
-        cameraMatrix = m4.translate(cameraMatrix, 0, 0, radius * 1.5);
+
+
+        const up = [0, 1, 0];
+        // Compute the camera's matrix using look at.
+        //const camera = m4.lookAt(cameraPosition, cameraTarget, up);
+        var camera = m4.yRotation(cameraAngleRadians);
+        camera = m4.translate(camera, 0, 0, radius * 1.5);
 
         // Make a view matrix from the camera matrix.
-        var viewMatrix = m4.inverse(cameraMatrix);
+        const view = m4.inverse(camera);
 
-        // create a viewProjection matrix. This will both apply perspective
-        // AND move the world so that the camera is effectively the origin
-        var viewProjectionMatrix = m4.multiply(projectionMatrix, viewMatrix);
+        const sharedUniforms = {
+            u_lightDirection: m4.normalize([-1, 3, 5]),
+            u_view: view,
+            u_projection: projection,
+        };
 
-        // Draw 'F's in a circle
-        for (var ii = 0; ii < numFs; ++ii) {
-            var angle = ii * Math.PI * 2 / numFs;
+        gl.useProgram(meshProgramInfo.program);
 
+        // calls gl.uniform
+        twgl.setUniforms(meshProgramInfo, sharedUniforms);
+
+        for (let i = 0; i < numObjects; ++i) {
+            // compute the world matrix once since all parts
+            // are at the same space.
+            var angle = i * Math.PI * 2 / numObjects;
             var x = Math.cos(angle) * radius;
             var z = Math.sin(angle) * radius;
-            var matrix = m4.translate(viewProjectionMatrix, x, 0, z);
+            //let u_world = m4.yRotation(time);
+            let u_world = m4.yRotation(time);
+            //u_world = m4.translate(u_world, ...objOffset);
+            u_world = m4.translate(u_world, x, 0, z);
 
-            // Set the matrix.
-            gl.uniformMatrix4fv(matrixLocation, false, matrix);
+            for (const { bufferInfo, vao, material } of parts) {
+                // set the attributes for this part.
+                gl.bindVertexArray(vao);
 
-            // Draw the geometry.
-            var primitiveType = gl.TRIANGLES;
-            var offset = 0;
-            var count = 16 * 6;
-            gl.drawArrays(primitiveType, offset, count);
+                // calls gl.uniform
+                twgl.setUniforms(meshProgramInfo, {
+                    u_world,
+                    u_diffuse: material.u_diffuse,
+                });
 
+                // calls gl.drawArrays or gl.drawElements
+                twgl.drawBufferInfo(gl, bufferInfo);
+            }
+
+            requestAnimationFrame(render);
         }
     }
+    requestAnimationFrame(render);
 }
-
 
 main();

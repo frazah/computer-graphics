@@ -1,429 +1,192 @@
-function createShader(gl, type, source) {
-    var shader = gl.createShader(type);
-    gl.shaderSource(shader, source);
-    gl.compileShader(shader);
-    var success = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
-    if (success) {
-        return shader;
+// This is not a full .obj parser.
+// see http://paulbourke.net/dataformats/obj/
+
+function parseOBJ(text) {
+    // because indices are base 1 let's just fill in the 0th data
+    const objPositions = [[0, 0, 0]];
+    const objTexcoords = [[0, 0]];
+    const objNormals = [[0, 0, 0]];
+    const objColors = [[0, 0, 0]];
+
+    // same order as `f` indices
+    const objVertexData = [
+        objPositions,
+        objTexcoords,
+        objNormals,
+        objColors,
+    ];
+
+    // same order as `f` indices
+    let webglVertexData = [
+        [],   // positions
+        [],   // texcoords
+        [],   // normals
+        [],   // colors
+    ];
+
+    const materialLibs = [];
+    const geometries = [];
+    let geometry;
+    let groups = ['default'];
+    let material = 'default';
+    let object = 'default';
+
+    const noop = () => { };
+
+    function newGeometry() {
+        // If there is an existing geometry and it's
+        // not empty then start a new one.
+        if (geometry && geometry.data.position.length) {
+            geometry = undefined;
+        }
     }
 
-    console.log(gl.getShaderInfoLog(shader));
-    gl.deleteShader(shader);
-}
-
-function createProgram(gl, vertexShader, fragmentShader) {
-    var program = gl.createProgram();
-    gl.attachShader(program, vertexShader);
-    gl.attachShader(program, fragmentShader);
-    gl.linkProgram(program);
-    var success = gl.getProgramParameter(program, gl.LINK_STATUS);
-    if (success) {
-        return program;
+    function setGeometry() {
+        if (!geometry) {
+            const position = [];
+            const texcoord = [];
+            const normal = [];
+            const color = [];
+            webglVertexData = [
+                position,
+                texcoord,
+                normal,
+                color,
+            ];
+            geometry = {
+                object,
+                groups,
+                material,
+                data: {
+                    position,
+                    texcoord,
+                    normal,
+                    color,
+                },
+            };
+            geometries.push(geometry);
+        }
     }
 
-    console.log(gl.getProgramInfoLog(program));
-    gl.deleteProgram(program);
-}
-
-function resizeCanvas() {
-    const canvas = document.getElementById('webgl-canvas');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight * 0.75;
-
-}
-
-// Fill the current ARRAY_BUFFER buffer
-// with the values that define a letter 'F'.
-function setGeometry(gl) {
-    var positions = new Float32Array([
-        // left column front
-        0, 0, 0,
-        0, 150, 0,
-        30, 0, 0,
-        0, 150, 0,
-        30, 150, 0,
-        30, 0, 0,
-
-        // top rung front
-        30, 0, 0,
-        30, 30, 0,
-        100, 0, 0,
-        30, 30, 0,
-        100, 30, 0,
-        100, 0, 0,
-
-        // middle rung front
-        30, 60, 0,
-        30, 90, 0,
-        67, 60, 0,
-        30, 90, 0,
-        67, 90, 0,
-        67, 60, 0,
-
-        // left column back
-        0, 0, 30,
-        30, 0, 30,
-        0, 150, 30,
-        0, 150, 30,
-        30, 0, 30,
-        30, 150, 30,
-
-        // top rung back
-        30, 0, 30,
-        100, 0, 30,
-        30, 30, 30,
-        30, 30, 30,
-        100, 0, 30,
-        100, 30, 30,
-
-        // middle rung back
-        30, 60, 30,
-        67, 60, 30,
-        30, 90, 30,
-        30, 90, 30,
-        67, 60, 30,
-        67, 90, 30,
-
-        // top
-        0, 0, 0,
-        100, 0, 0,
-        100, 0, 30,
-        0, 0, 0,
-        100, 0, 30,
-        0, 0, 30,
-
-        // top rung right
-        100, 0, 0,
-        100, 30, 0,
-        100, 30, 30,
-        100, 0, 0,
-        100, 30, 30,
-        100, 0, 30,
-
-        // under top rung
-        30, 30, 0,
-        30, 30, 30,
-        100, 30, 30,
-        30, 30, 0,
-        100, 30, 30,
-        100, 30, 0,
-
-        // between top rung and middle
-        30, 30, 0,
-        30, 60, 30,
-        30, 30, 30,
-        30, 30, 0,
-        30, 60, 0,
-        30, 60, 30,
-
-        // top of middle rung
-        30, 60, 0,
-        67, 60, 30,
-        30, 60, 30,
-        30, 60, 0,
-        67, 60, 0,
-        67, 60, 30,
-
-        // right of middle rung
-        67, 60, 0,
-        67, 90, 30,
-        67, 60, 30,
-        67, 60, 0,
-        67, 90, 0,
-        67, 90, 30,
-
-        // bottom of middle rung.
-        30, 90, 0,
-        30, 90, 30,
-        67, 90, 30,
-        30, 90, 0,
-        67, 90, 30,
-        67, 90, 0,
-
-        // right of bottom
-        30, 90, 0,
-        30, 150, 30,
-        30, 90, 30,
-        30, 90, 0,
-        30, 150, 0,
-        30, 150, 30,
-
-        // bottom
-        0, 150, 0,
-        0, 150, 30,
-        30, 150, 30,
-        0, 150, 0,
-        30, 150, 30,
-        30, 150, 0,
-
-        // left side
-        0, 0, 0,
-        0, 0, 30,
-        0, 150, 30,
-        0, 0, 0,
-        0, 150, 30,
-        0, 150, 0,
-    ]);
-
-    // Center the F around the origin and Flip it around. We do this because
-    // we're in 3D now with and +Y is up where as before when we started with 2D
-    // we had +Y as down.
-    var matrix = m4.xRotation(Math.PI);
-
-    // We could do by changing all the values above but I'm lazy.
-    // We could also do it with a matrix at draw time but you should
-    // never do stuff at draw time if you can do it at init time.
-    matrix = m4.translate(matrix, -50, -75, -15);
-
-    for (var ii = 0; ii < positions.length; ii += 3) {
-        var vector = m4.transformVector(matrix, [positions[ii + 0], positions[ii + 1], positions[ii + 2], 1]);
-        positions[ii + 0] = vector[0];
-        positions[ii + 1] = vector[1];
-        positions[ii + 2] = vector[2];
+    function addVertex(vert) {
+        const ptn = vert.split('/');
+        ptn.forEach((objIndexStr, i) => {
+            if (!objIndexStr) {
+                return;
+            }
+            const objIndex = parseInt(objIndexStr);
+            const index = objIndex + (objIndex >= 0 ? 0 : objVertexData[i].length);
+            webglVertexData[i].push(...objVertexData[i][index]);
+            // if this is the position index (index 0) and we parsed
+            // vertex colors then copy the vertex colors to the webgl vertex color data
+            if (i === 0 && objColors.length > 1) {
+                geometry.data.color.push(...objColors[index]);
+            }
+        });
     }
 
-    gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
-}
+    const keywords = {
+        v(parts) {
+            // if there are more than 3 values here they are vertex colors
+            if (parts.length > 3) {
+                objPositions.push(parts.slice(0, 3).map(parseFloat));
+                objColors.push(parts.slice(3).map(parseFloat));
+            } else {
+                objPositions.push(parts.map(parseFloat));
+            }
+        },
+        vn(parts) {
+            objNormals.push(parts.map(parseFloat));
+        },
+        vt(parts) {
+            // should check for missing v and extra w?
+            objTexcoords.push(parts.map(parseFloat));
+        },
+        f(parts) {
+            setGeometry();
+            const numTriangles = parts.length - 2;
+            for (let tri = 0; tri < numTriangles; ++tri) {
+                addVertex(parts[0]);
+                addVertex(parts[tri + 1]);
+                addVertex(parts[tri + 2]);
+            }
+        },
+        s: noop,    // smoothing group
+        mtllib(parts, unparsedArgs) {
+            // the spec says there can be multiple filenames here
+            // but many exist with spaces in a single filename
+            materialLibs.push(unparsedArgs);
+        },
+        usemtl(parts, unparsedArgs) {
+            material = unparsedArgs;
+            newGeometry();
+        },
+        g(parts) {
+            groups = parts;
+            newGeometry();
+        },
+        o(parts, unparsedArgs) {
+            object = unparsedArgs;
+            newGeometry();
+        },
+    };
 
-function setSphereGeometry(gl) {   
-    var positions = [];
-    var numFs = 12;
-    var radius = 200;
-    for (var ii = 0; ii < numFs; ++ii) {
-        var angle = ii * Math.PI * 2 / numFs;
-
-        var x = Math.cos(angle) * radius;
-        var z = Math.sin(angle) * radius;
-        positions.push(x, 0, z);
+    const keywordRE = /(\w*)(?: )*(.*)/;
+    const lines = text.split('\n');
+    for (let lineNo = 0; lineNo < lines.length; ++lineNo) {
+        const line = lines[lineNo].trim();
+        if (line === '' || line.startsWith('#')) {
+            continue;
+        }
+        const m = keywordRE.exec(line);
+        if (!m) {
+            continue;
+        }
+        const [, keyword, unparsedArgs] = m;
+        const parts = line.split(/\s+/).slice(1);
+        const handler = keywords[keyword];
+        if (!handler) {
+            console.warn('unhandled keyword:', keyword);  // eslint-disable-line no-console
+            continue;
+        }
+        handler(parts, unparsedArgs);
     }
 
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+    // remove any arrays that have no entries.
+    for (const geometry of geometries) {
+        geometry.data = Object.fromEntries(
+            Object.entries(geometry.data).filter(([, array]) => array.length > 0));
+    }
+
+    return {
+        geometries,
+        materialLibs,
+    };
 }
 
 
-
-// Fill the current ARRAY_BUFFER buffer with colors for the 'F'.
-function setColors(gl) {
-    gl.bufferData(
-        gl.ARRAY_BUFFER,
-        new Uint8Array([
-            // left column front
-            200, 70, 120,
-            200, 70, 120,
-            200, 70, 120,
-            200, 70, 120,
-            200, 70, 120,
-            200, 70, 120,
-
-            // top rung front
-            200, 70, 120,
-            200, 70, 120,
-            200, 70, 120,
-            200, 70, 120,
-            200, 70, 120,
-            200, 70, 120,
-
-            // middle rung front
-            200, 70, 120,
-            200, 70, 120,
-            200, 70, 120,
-            200, 70, 120,
-            200, 70, 120,
-            200, 70, 120,
-
-            // left column back
-            80, 70, 200,
-            80, 70, 200,
-            80, 70, 200,
-            80, 70, 200,
-            80, 70, 200,
-            80, 70, 200,
-
-            // top rung back
-            80, 70, 200,
-            80, 70, 200,
-            80, 70, 200,
-            80, 70, 200,
-            80, 70, 200,
-            80, 70, 200,
-
-            // middle rung back
-            80, 70, 200,
-            80, 70, 200,
-            80, 70, 200,
-            80, 70, 200,
-            80, 70, 200,
-            80, 70, 200,
-
-            // top
-            70, 200, 210,
-            70, 200, 210,
-            70, 200, 210,
-            70, 200, 210,
-            70, 200, 210,
-            70, 200, 210,
-
-            // top rung right
-            200, 200, 70,
-            200, 200, 70,
-            200, 200, 70,
-            200, 200, 70,
-            200, 200, 70,
-            200, 200, 70,
-
-            // under top rung
-            210, 100, 70,
-            210, 100, 70,
-            210, 100, 70,
-            210, 100, 70,
-            210, 100, 70,
-            210, 100, 70,
-
-            // between top rung and middle
-            210, 160, 70,
-            210, 160, 70,
-            210, 160, 70,
-            210, 160, 70,
-            210, 160, 70,
-            210, 160, 70,
-
-            // top of middle rung
-            70, 180, 210,
-            70, 180, 210,
-            70, 180, 210,
-            70, 180, 210,
-            70, 180, 210,
-            70, 180, 210,
-
-            // right of middle rung
-            100, 70, 210,
-            100, 70, 210,
-            100, 70, 210,
-            100, 70, 210,
-            100, 70, 210,
-            100, 70, 210,
-
-            // bottom of middle rung.
-            76, 210, 100,
-            76, 210, 100,
-            76, 210, 100,
-            76, 210, 100,
-            76, 210, 100,
-            76, 210, 100,
-
-            // right of bottom
-            140, 210, 80,
-            140, 210, 80,
-            140, 210, 80,
-            140, 210, 80,
-            140, 210, 80,
-            140, 210, 80,
-
-            // bottom
-            90, 130, 110,
-            90, 130, 110,
-            90, 130, 110,
-            90, 130, 110,
-            90, 130, 110,
-            90, 130, 110,
-
-            // left side
-            160, 160, 220,
-            160, 160, 220,
-            160, 160, 220,
-            160, 160, 220,
-            160, 160, 220,
-            160, 160, 220,
-        ]),
-        gl.STATIC_DRAW);
+function getExtents(positions) {
+    const min = positions.slice(0, 3);
+    const max = positions.slice(0, 3);
+    for (let i = 3; i < positions.length; i += 3) {
+        for (let j = 0; j < 3; ++j) {
+            const v = positions[i + j];
+            min[j] = Math.min(v, min[j]);
+            max[j] = Math.max(v, max[j]);
+        }
+    }
+    return { min, max };
 }
 
-
-function setupGraphics(gl) {
-    // Setup Vertex Shader
-    // A vertex shader's job is to compute vertex positions
-    var vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
-
-    // Setup Fragment Shader
-    // A fragment shader's job is to compute the color of each pixel
-    var fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
-
-    // Link program
-    // A program is a combination of a vertex and a fragment shader
-    var program = createProgram(gl, vertexShader, fragmentShader);
-
-
-    // Get position attribute location
-    // Now that we've created a GLSL program on the GPU we need to supply data to it. 
-    // The majority of the WebGL API is about setting up state to supply data to
-    // our GLSL programs. In this case our only input to our GLSL program is 
-    // a_position which is an attribute. The first thing we should do is look up
-    // the location of the attribute for the program we just created.
-    var positionAttributeLocation = gl.getAttribLocation(program, 'a_position');
-
-    var resolutionUniformLocation = gl.getUniformLocation(program, "u_resolution");
-
-    var matrixLocation = gl.getUniformLocation(program, "u_matrix");
-
-
-
-    // Create a buffer and bind it to the ARRAY_BUFFER
-    const positionBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-
-    // Define rectangle vertices and store in buffer
-    const vertexPositions = new Float32Array([
-        0, -100,
-        150, 125,
-        -175, 100,
-    ]);
-    gl.bufferData(gl.ARRAY_BUFFER, vertexPositions, gl.STATIC_DRAW);
-    // gl.STATIC_DRAW tells WebGL we are not likely to change this data much.
-
-    // Now that we've put data in a buffer we need to tell the attribute how to get data out of it. 
-    // First we need to create a collection of attribute state called a Vertex Array Object.
-    var vao = gl.createVertexArray();
-    gl.bindVertexArray(vao);
-    gl.enableVertexAttribArray(positionAttributeLocation);
-
-    var size = 2;          // 2 components per iteration
-    var type = gl.FLOAT;   // the data is 32bit floats
-    var normalize = false; // don't normalize the data
-    var stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next position
-    var offset = 0;        // start at the beginning of the buffer
-    gl.vertexAttribPointer(positionAttributeLocation, size, type, normalize, stride, offset);
-    /*
-        A hidden part of gl.vertexAttribPointer is that it binds the current ARRAY_BUFFER
-        to the attribute. In other words now this attribute is bound to 
-        positionBuffer. That means we're free to bind something else to 
-        the ARRAY_BUFFER bind point. The attribute will continue to use 
-        positionBuffer.
-        
-        vec4 is a 4 float value. In JavaScript you could think of it
-        something like a_position = {x: 0, y: 0, z: 0, w: 0}.
-        Above we set size = 2. Attributes default to 0, 0, 0, 1
-        so this attribute will get its first 2 values (x and y)
-        from our buffer. The z, and w will be the default 0 and 1 respectively.
-    */
-
-
-    gl.useProgram(program);
-    gl.uniform2f(resolutionUniformLocation, gl.canvas.width, gl.canvas.height);
-
-    
-    var translation = [200, 150];
-    var angleInRadians = 0;
-    var scale = [1, 1];
-    // Compute the matrix
-    var matrix = m3.projection(gl.canvas.clientWidth, gl.canvas.clientHeight);
-    matrix = m3.translate(matrix, translation[0], translation[1]);
-    matrix = m3.rotate(matrix, angleInRadians);
-    matrix = m3.scale(matrix, scale[0], scale[1]);
-
-    // Set the matrix.
-    gl.uniformMatrix3fv(matrixLocation, false, matrix);
-
-
-    return program;
+function getGeometriesExtents(geometries) {
+    return geometries.reduce(({ min, max }, { data }) => {
+        const minMax = getExtents(data.position);
+        return {
+            min: min.map((min, ndx) => Math.min(minMax.min[ndx], min)),
+            max: max.map((max, ndx) => Math.max(minMax.max[ndx], max)),
+        };
+    }, {
+        min: Array(3).fill(Number.POSITIVE_INFINITY),
+        max: Array(3).fill(Number.NEGATIVE_INFINITY),
+    });
 }
-
