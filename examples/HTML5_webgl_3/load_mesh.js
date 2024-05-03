@@ -81,7 +81,7 @@
       function parseobjFile(result, status, xhr){                  
          var result = glmReadOBJ(result,new subd_mesh());
 //scommentare/commentare per utilizzare o meno la LoadSubdivMesh
-//         mesh.data = LoadSubdivMesh(result.mesh);
+   //         mesh.data = LoadSubdivMesh(result.mesh);
          mesh.data = result.mesh;
          mesh.fileMTL = result.fileMtl;
       }	

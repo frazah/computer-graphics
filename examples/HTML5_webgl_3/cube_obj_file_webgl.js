@@ -21,7 +21,7 @@ function main() {
     return;
   }
 
-  mesh.sourceMesh='data/cube/cube.obj';
+  mesh.sourceMesh='data/moon/moon.obj';
   //mesh.sourceMesh='data/chair/chair.obj';
   //mesh.sourceMesh='data/boeing/boeing_3.obj';
   //mesh.sourceMesh='data/soccerball/soccerball.obj';
@@ -151,8 +151,20 @@ function main() {
     return d * Math.PI / 180;
   }
 
+  // Creating a GUI
+  var gui = new dat.GUI({ autoPlace: false });
+
+  // Position
+  document.querySelector("#gui").append(gui.domElement);
+
+  // Add a string controller.
+  var person = { name: 'Sam' };
+  gui.add(person, 'name');
+
   // Get the starting time.
   var then = 0;
+  var radius = 1;
+
 
   requestAnimationFrame(drawScene);
 
@@ -172,8 +184,8 @@ function main() {
     gl.enable(gl.DEPTH_TEST);
 
     // Animate the rotation
-    modelYRotationRadians += -0.7 * deltaTime;
-    modelXRotationRadians += -0.4 * deltaTime;
+    modelYRotationRadians += -0.5 * deltaTime;
+    //modelXRotationRadians += -0.0 * deltaTime;
 
     // Clear the canvas AND the depth buffer.
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -181,6 +193,11 @@ function main() {
     var matrix = m4.identity();
     matrix = m4.xRotate(matrix, modelXRotationRadians);
     matrix = m4.yRotate(matrix, modelYRotationRadians);
+    
+    var angle = 1 * Math.PI * 2 / 1;
+    var x = Math.cos(angle) * radius;
+    var z = Math.sin(angle) * radius;
+    //matrix = m4.translate(matrix, x, 0, z);
 
     // Set the matrix.
     gl.uniformMatrix4fv(matrixLocation, false, matrix);

@@ -6,12 +6,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 <title>WebGL - Textures - Texture Atlas</title>
 <!--<link type="text/css" href="resources/webgl-tutorials.css" rel="stylesheet" />-->
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<div class="description">
+<!-- <div class="description">
 Textured Cube with the same not symmetrical image on each face and illumination model. <br/>
-</div>
+</div> -->
 <canvas id="canvas" width="600" height="600"></canvas>
+<div id="gui"></div>
 </body>
 <!-- vertex shader -->
 <script id="3d-vertex-shader" type="x-shader/x-vertex">
@@ -61,7 +63,7 @@ Textured Cube with the same not symmetrical image on each face and illumination 
     vec3 surfaceToViewDirection = normalize(v_surfaceToView);
     vec3 halfVector = normalize(u_lightDirection + surfaceToViewDirection);
 
-    float fakeLight = dot(u_lightDirection, normal) * .5 + .5;
+    float fakeLight = dot(u_lightDirection, normal) * .7 + .7;
     float specularLight = clamp(dot(normal, halfVector), 0.0, 1.0);
 
     vec4 diffuseMapColor = texture2D(diffuseMap, v_texcoord);
@@ -82,6 +84,7 @@ Textured Cube with the same not symmetrical image on each face and illumination 
 <script type="text/javascript" src="resources/webgl-utils.js"></script>
 <script type="text/javascript" src="resources/m4.js"></script>
 <script type="text/javascript" src="resources/jquery-3.6.0.js"></script>
+<script type="text/javascript" src="resources/dat.gui.min.js"></script>
 <script type="text/javascript" src="load_mesh.js"></script>
 <script type="text/javascript" src="cube_obj_file_webgl.js"></script>
 

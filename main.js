@@ -1,237 +1,212 @@
 "use strict";
 
-async function main() {
-    // Get A WebGL context
-    /** @type {HTMLCanvasElement} */
-    const canvas = document.querySelector("#canvas");
-    const gl = canvas.getContext("webgl2");
-    if (!gl) {
-        return;
-    }
+var mesh = new Array();
+var positions = [];
+var normals = [];
+var texcoords = [];
+var numVertices;
+var ambient;   //Ka
+var diffuse;   //Kd
+var specular;  //Ks
+var emissive;  //Ke
+var shininess; //Ns
+var opacity;   //Ni
 
-    // Tell the twgl to match position with a_position etc..
-    twgl.setAttributePrefix("a_");
+function main() {
+  // Get A WebGL context
+  /** @type {HTMLCanvasElement} */
+  var canvas = document.getElementById("canvas");
+  var gl = canvas.getContext("webgl");
+  if (!gl) {
+    return;
+  }
 
-    const vs = vertexShaderSource;;
-    const fs = fragmentShaderSource;
+  mesh.sourceMesh='resources/models/moon/moon.obj';
+  //mesh.sourceMesh='data/chair/chair.obj';
+  //mesh.sourceMesh='data/boeing/boeing_3.obj';
+  //mesh.sourceMesh='data/soccerball/soccerball.obj';
+  //mesh.sourceMesh='data/ruota/ruota_davanti_origine.obj';
+  //mesh.sourceMesh='data/ruota/ruota_davanti_gomma.obj';
+  LoadMesh(gl,mesh);
+  //console.log(mesh);
 
-    // compiles and links the shaders, looks up attribute and uniform locations
-    const meshProgramInfo = twgl.createProgramInfo(gl, [vs, fs]);
+  // setup GLSL program
+  var program = webglUtils.createProgramFromScripts(gl, ["3d-vertex-shader", "3d-fragment-shader"]);
+  // Tell it to use our program (pair of shaders)
+  gl.useProgram(program);
 
-    //const response = await fetch('https://webgl2fundamentals.org/webgl/resources/models/book-vertex-chameleon-study/book.obj');
+  // look up where the vertex data needs to go.
+  var positionLocation = gl.getAttribLocation(program, "a_position");
+  var normalLocation = gl.getAttribLocation(program, "a_normal");
+  var texcoordLocation = gl.getAttribLocation(program, "a_texcoord");
 
-    const objHref = 'resources/models/moon/moon.obj';
-    const response = await fetch(objHref);
-    const text = await response.text();
-    const obj = parseOBJ(text);
-    const baseHref = new URL(objHref, window.location.href);
-    const matTexts = await Promise.all(obj.materialLibs.map(async filename => {
-        const matHref = new URL(filename, baseHref).href;
-        const response = await fetch(matHref);
-        return await response.text();
-    }));
-    const materials = parseMTL(matTexts.join('\n'));
+  // Create a buffer for positions
+  var positionBuffer = gl.createBuffer();
+  // Bind it to ARRAY_BUFFER (think of it as ARRAY_BUFFER = positionBuffer)
+  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+  // Put the positions in the buffer
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
 
-    const textures = {
-        defaultWhite: twgl.createTexture(gl, { src: [255, 255, 255, 255] }),
-    };
+  // Create a buffer for normals
+  var normalsBuffer = gl.createBuffer();
+  // Bind it to ARRAY_BUFFER (think of it as ARRAY_BUFFER mormalsBuffer)
+  gl.bindBuffer(gl.ARRAY_BUFFER, normalsBuffer);
+  // Put the normals in the buffer
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STATIC_DRAW);
 
-    const defaultMaterial = {
-        diffuse: [1, 1, 1],
-        diffuseMap: textures.defaultWhite,
-        ambient: [0, 0, 0],
-        specular: [1, 1, 1],
-        shininess: 400,
-        opacity: 1,
-    };
+  // provide texture coordinates
+  var texcoordBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
+  // Set Texcoords
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texcoords), gl.STATIC_DRAW);
 
-    // load texture for materials
-    for (const material of Object.values(materials)) {
-        Object.entries(material)
-            .filter(([key]) => key.endsWith('Map'))
-            .forEach(([key, filename]) => {
-                let texture = textures[filename];
-                if (!texture) {
-                    const textureHref = new URL(filename, baseHref).href;
-                    texture = twgl.createTexture(gl, { src: textureHref, flipY: true });
-                    textures[filename] = texture;
-                }
-                material[key] = texture;
-            });
-    }
+  var ambientLight=[0.2,0.2,0.2];
+  var colorLight=[1.0,1.0,1.0];
 
-    const parts = obj.geometries.map(({ material, data }) => {
-        // Because data is just named arrays like this
-        //
-        // {
-        //   position: [...],
-        //   texcoord: [...],
-        //   normal: [...],
-        // }
-        //
-        // and because those names match the attributes in our vertex
-        // shader we can pass it directly into `createBufferInfoFromArrays`
-        // from the article "less code more fun".
+  gl.uniform3fv(gl.getUniformLocation(program, "diffuse" ), diffuse );
+  gl.uniform3fv(gl.getUniformLocation(program, "ambient" ), ambient); 
+  gl.uniform3fv(gl.getUniformLocation(program, "specular"), specular );	
+  gl.uniform3fv(gl.getUniformLocation(program, "emissive"), emissive );
+  //gl.uniform3fv(gl.getUniformLocation(program, "u_lightDirection" ), xxx );
+  gl.uniform3fv(gl.getUniformLocation(program, "u_ambientLight" ), ambientLight );
+  gl.uniform3fv(gl.getUniformLocation(program, "u_colorLight" ), colorLight );
 
-        if (data.color) {
-            if (data.position.length === data.color.length) {
-                // it's 3. The our helper library assumes 4 so we need
-                // to tell it there are only 3.
-                data.color = { numComponents: 3, data: data.color };
-            }
-        } else {
-            // there are no vertex colors so just use constant white
-            data.color = { value: [1, 1, 1, 1] };
-        }
+  gl.uniform1f(gl.getUniformLocation(program, "shininess"), shininess);
+  gl.uniform1f(gl.getUniformLocation(program, "opacity"), opacity);
 
-        // create a buffer for each array by calling
-        // gl.createBuffer, gl.bindBuffer, gl.bufferData
-        const bufferInfo = twgl.createBufferInfoFromArrays(gl, data);
-        const vao = twgl.createVAOFromBufferInfo(gl, meshProgramInfo, bufferInfo);
-        return {
-            material: {
-                ...defaultMaterial,
-                ...materials[material],
-            },
-            bufferInfo,
-            vao,
-        };
-    });
+  // Turn on the position attribute
+  gl.enableVertexAttribArray(positionLocation);
+  // Bind the position buffer.
+  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+  // Tell the position attribute how to get data out of positionBuffer (ARRAY_BUFFER)
+  var size = 3;          // 3 components per iteration
+  var type = gl.FLOAT;   // the data is 32bit floats
+  var normalize = false; // don't normalize the data
+  var stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next position
+  var offset = 0;        // start at the beginning of the buffer
+  gl.vertexAttribPointer(positionLocation, size, type, normalize, stride, offset);
 
+  // Turn on the normal attribute
+  gl.enableVertexAttribArray(normalLocation);
+  // Bind the normal buffer.
+  gl.bindBuffer(gl.ARRAY_BUFFER, normalsBuffer);
+  gl.vertexAttribPointer(normalLocation, size, type, normalize, stride, offset);
 
-    const extents = getGeometriesExtents(obj.geometries);
-    const range = m4.subtractVectors(extents.max, extents.min);
+  // Turn on the texcord attribute
+  gl.enableVertexAttribArray(texcoordLocation);
+  // Bind the position buffer.
+  gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
+  // Tell the position attribute how to get data out of positionBuffer (ARRAY_BUFFER)
+  size = 2;          // 2 components per iteration
+  gl.vertexAttribPointer(texcoordLocation, size, type, normalize, stride, offset);
 
-    // amount to move the object so its center is at the origin
-    const objOffset = m4.scaleVector(
-        m4.addVectors(
-            extents.min,
-            m4.scaleVector(range, 0.5)),
-        -1);
-    const cameraTarget = [0, 0, 0];
+  var fieldOfViewRadians = degToRad(30);
+  var modelXRotationRadians = degToRad(0);
+  var modelYRotationRadians = degToRad(0);
 
-    // figure out how far away to move the camera so we can likely
-    // see the object.
-    const radius = m4.length(range) * 1.2;
-    const cameraPosition = m4.addVectors(cameraTarget, [
-        0,
-        0,
-        radius,
-    ]);
-    // Set zNear and zFar to something hopefully appropriate
-    // for the size of this object.
-    const zNear = radius / 100;
-    const zFar = radius * 3;
+  // Compute the projection matrix
+  var aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+  //  zmin=0.125;
+  var zmin=0.1;
+  var projectionMatrix = m4.perspective(fieldOfViewRadians, aspect, zmin, 200);
 
+  var cameraPosition = [4.5, 4.5, 2];
+  var up = [0, 0, 1];
+  var target = [0, 0, 0];
 
-    // First let's make some variables
-    // to hold the translation,
-    var fieldOfViewRadians = degToRad(60);
-    var cameraAngleRadians = degToRad(0);
-    var cam1OrthoUnits = 10;
+  // Compute the camera's matrix using look at.
+  var cameraMatrix = m4.lookAt(cameraPosition, target, up);
 
-    function setupGUI(cameraAngleRadians, fieldOfViewRadians, cam1OrthoUnits) {
-        webglLessonsUI.setupSlider("#cameraAngle", { value: radToDeg(cameraAngleRadians), slide: updateCameraAngle, min: -360, max: 360 });
-        webglLessonsUI.setupSlider("#fieldOfView", { value: radToDeg(fieldOfViewRadians), slide: updateFieldOfView, min: 1, max: 179 });
-        webglLessonsUI.setupSlider("#camOrtho", { value: cam1OrthoUnits, slide: updateOrtho, min: 1, max: 50 });
-    }
+  // Make a view matrix from the camera matrix.
+  var viewMatrix = m4.inverse(cameraMatrix);
 
-    function updateFieldOfView(event, ui) {
-        fieldOfViewRadians = degToRad(ui.value);
-        //drawScene();
-    }
+  var matrixLocation = gl.getUniformLocation(program, "u_world");
+  var textureLocation = gl.getUniformLocation(program, "diffuseMap");
+  var viewMatrixLocation = gl.getUniformLocation(program, "u_view");
+  var projectionMatrixLocation = gl.getUniformLocation(program, "u_projection");
+  var lightWorldDirectionLocation = gl.getUniformLocation(program, "u_lightDirection");
+  var viewWorldPositionLocation = gl.getUniformLocation(program, "u_viewWorldPosition");
 
-    function updateCameraAngle(event, ui) {
-        cameraAngleRadians = degToRad(ui.value);
-        //drawScene();
-    }
+  gl.uniformMatrix4fv(viewMatrixLocation, false, viewMatrix);
+  gl.uniformMatrix4fv(projectionMatrixLocation, false, projectionMatrix);
+        
+  // set the light position
+  gl.uniform3fv(lightWorldDirectionLocation, m4.normalize([-1, 3, 5]));
 
-    function updateOrtho(event, ui) {
-        cam1OrthoUnits = ui.value;
-        //drawScene();
-    }
+  // set the camera/view position
+  gl.uniform3fv(viewWorldPositionLocation, cameraPosition);
 
-    // Setup a ui.
-    setupGUI(fieldOfViewRadians, cameraAngleRadians, cam1OrthoUnits);
+  // Tell the shader to use texture unit 0 for diffuseMap
+  gl.uniform1i(textureLocation, 0);
 
+  function isPowerOf2(value) {
+    return (value & (value - 1)) === 0;
+  }
 
-    function render(time) {
-        time *= 0.001;  // convert to seconds
+  function radToDeg(r) {
+    return r * 180 / Math.PI;
+  }
 
-        var numObjects = 1;
+  function degToRad(d) {
+    return d * Math.PI / 180;
+  }
 
-        twgl.resizeCanvasToDisplaySize(gl.canvas);
-        gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-        gl.enable(gl.DEPTH_TEST);
+  // Creating a GUI
+  var gui = new dat.GUI({ autoPlace: false });
 
-        //const fieldOfViewRadians = degToRad(60);
-        const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+  // Position
+  document.querySelector("#gui").append(gui.domElement);
 
-        // Orthographic camera 
-        var cam1Ortho = false;
+  // Add a string controller.
+  var person = { name: 'Sam' };
+  gui.add(person, 'name');
 
-        var projection = m4.perspective(fieldOfViewRadians, aspect, zNear, zFar);
-
-        if (cam1Ortho) {
-            projection = m4.orthographic(
-                -cam1OrthoUnits * aspect,  // left
-                cam1OrthoUnits * aspect,  // right
-                -cam1OrthoUnits,           // bottom
-                cam1OrthoUnits,           // top
-                zNear,
-                zFar);
-        }
+  // Get the starting time.
+  var then = 0;
+  var radius = 1;
 
 
+  requestAnimationFrame(drawScene);
 
-        const up = [0, 1, 0];
-        // Compute the camera's matrix using look at.
-        //const camera = m4.lookAt(cameraPosition, cameraTarget, up);
-        var camera = m4.yRotation(cameraAngleRadians);
-        camera = m4.translate(camera, 0, 0, radius * 1.5);
+  // Draw the scene.
+  function drawScene(time) {
+    // convert to seconds
+    time *= 0.001;
+    // Subtract the previous time from the current time
+    var deltaTime = time - then;
+    // Remember the current time for the next frame.
+    then = time;
 
-        // Make a view matrix from the camera matrix.
-        const view = m4.inverse(camera);
+    // Tell WebGL how to convert from clip space to pixels
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
-        const sharedUniforms = {
-            u_lightDirection: m4.normalize([-1, 3, 5]),
-            u_view: view,
-            u_projection: projection,
-        };
+    //gl.enable(gl.CULL_FACE);
+    gl.enable(gl.DEPTH_TEST);
 
-        gl.useProgram(meshProgramInfo.program);
+    // Animate the rotation
+    modelYRotationRadians += -0.5 * deltaTime;
+    //modelXRotationRadians += -0.0 * deltaTime;
 
-        // calls gl.uniform
-        twgl.setUniforms(meshProgramInfo, sharedUniforms);
+    // Clear the canvas AND the depth buffer.
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        for (let i = 0; i < numObjects; ++i) {
-            // compute the world matrix once since all parts
-            // are at the same space.
-            var angle = i * Math.PI * 2 / numObjects;
-            var x = Math.cos(angle) * radius;
-            var z = Math.sin(angle) * radius;
-            //let u_world = m4.yRotation(time);
-            let u_world = m4.yRotation(time);
-            //u_world = m4.translate(u_world, ...objOffset);
-            u_world = m4.translate(u_world, x, 0, z);
+    var matrix = m4.identity();
+    matrix = m4.xRotate(matrix, modelXRotationRadians);
+    matrix = m4.yRotate(matrix, modelYRotationRadians);
+    
+    var angle = 1 * Math.PI * 2 / 1;
+    var x = Math.cos(angle) * radius;
+    var z = Math.sin(angle) * radius;
+    //matrix = m4.translate(matrix, x, 0, z);
 
-            for (const { bufferInfo, vao, material } of parts) {
-                // set the attributes for this part.
-                gl.bindVertexArray(vao);
+    // Set the matrix.
+    gl.uniformMatrix4fv(matrixLocation, false, matrix);
 
-                // calls gl.uniform
-                twgl.setUniforms(meshProgramInfo, {
-                    u_world,
-                }, material);
+    // Draw the geometry.
+    gl.drawArrays(gl.TRIANGLES, 0, numVertices);
 
-                // calls gl.drawArrays or gl.drawElements
-                twgl.drawBufferInfo(gl, bufferInfo);
-            }
-
-            requestAnimationFrame(render);
-        }
-    }
-    requestAnimationFrame(render);
+    requestAnimationFrame(drawScene);
+  }
 }
 
 main();
