@@ -5,6 +5,7 @@ var positions = [];
 var normals = [];
 var texcoords = [];
 var numVertices;
+var lightDirection = [0.5, 0.7, 1];
 var ambient;   //Ka
 var diffuse;   //Kd
 var specular;  //Ks
@@ -20,15 +21,10 @@ function main() {
   if (!gl) {
     return;
   }
+  webglUtils.resizeCanvasToDisplaySize(gl.canvas);
 
-  mesh.sourceMesh='resources/models/moon/moon.obj';
-  //mesh.sourceMesh='data/chair/chair.obj';
-  //mesh.sourceMesh='data/boeing/boeing_3.obj';
-  //mesh.sourceMesh='data/soccerball/soccerball.obj';
-  //mesh.sourceMesh='data/ruota/ruota_davanti_origine.obj';
-  //mesh.sourceMesh='data/ruota/ruota_davanti_gomma.obj';
-  LoadMesh(gl,mesh);
-  //console.log(mesh);
+  mesh.sourceMesh = 'resources/models/moon/moon.obj';
+  LoadMesh(gl, mesh);
 
   // setup GLSL program
   var program = webglUtils.createProgramFromScripts(gl, ["3d-vertex-shader", "3d-fragment-shader"]);
@@ -49,7 +45,7 @@ function main() {
 
   // Create a buffer for normals
   var normalsBuffer = gl.createBuffer();
-  // Bind it to ARRAY_BUFFER (think of it as ARRAY_BUFFER mormalsBuffer)
+  // Bind it to ARRAY_BUFFER (think of it as ARRAY_BUFFER = normalsBuffer)
   gl.bindBuffer(gl.ARRAY_BUFFER, normalsBuffer);
   // Put the normals in the buffer
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STATIC_DRAW);
@@ -60,17 +56,16 @@ function main() {
   // Set Texcoords
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texcoords), gl.STATIC_DRAW);
 
-  var ambientLight=[0.2,0.2,0.2];
-  var colorLight=[1.0,1.0,1.0];
+  var ambientLight = [0.2, 0.2, 0.2];
+  var colorLight = [1.0, 1.0, 1.0];
 
-  gl.uniform3fv(gl.getUniformLocation(program, "diffuse" ), diffuse );
-  gl.uniform3fv(gl.getUniformLocation(program, "ambient" ), ambient); 
-  gl.uniform3fv(gl.getUniformLocation(program, "specular"), specular );	
-  gl.uniform3fv(gl.getUniformLocation(program, "emissive"), emissive );
-  //gl.uniform3fv(gl.getUniformLocation(program, "u_lightDirection" ), xxx );
-  gl.uniform3fv(gl.getUniformLocation(program, "u_ambientLight" ), ambientLight );
-  gl.uniform3fv(gl.getUniformLocation(program, "u_colorLight" ), colorLight );
-
+  gl.uniform3fv(gl.getUniformLocation(program, "diffuse"), diffuse);
+  gl.uniform3fv(gl.getUniformLocation(program, "ambient"), ambient);
+  gl.uniform3fv(gl.getUniformLocation(program, "specular"), specular);
+  gl.uniform3fv(gl.getUniformLocation(program, "emissive"), emissive);
+  gl.uniform3fv(gl.getUniformLocation(program, "u_lightDirection" ), lightDirection );
+  gl.uniform3fv(gl.getUniformLocation(program, "u_ambientLight"), ambientLight);
+  gl.uniform3fv(gl.getUniformLocation(program, "u_colorLight"), colorLight);
   gl.uniform1f(gl.getUniformLocation(program, "shininess"), shininess);
   gl.uniform1f(gl.getUniformLocation(program, "opacity"), opacity);
 
@@ -100,22 +95,35 @@ function main() {
   size = 2;          // 2 components per iteration
   gl.vertexAttribPointer(texcoordLocation, size, type, normalize, stride, offset);
 
-  var fieldOfViewRadians = degToRad(30);
+  ////////////////////////////////
+
+  var controls = {
+    enable: true,
+    cameraX: 4.5,
+    cameraY: 4.5,
+    cameraZ: 2,
+    cameraAngleRadians: degToRad(0),
+    fieldOfViewRadians: degToRad(90),
+  };
+
   var modelXRotationRadians = degToRad(0);
   var modelYRotationRadians = degToRad(0);
 
   // Compute the projection matrix
   var aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
-  //  zmin=0.125;
-  var zmin=0.1;
-  var projectionMatrix = m4.perspective(fieldOfViewRadians, aspect, zmin, 200);
+  var zmin = 1;
+  var zmax = 500;
+  var projectionMatrix = m4.perspective(controls.fieldOfViewRadians, aspect, zmin, zmax);
 
-  var cameraPosition = [4.5, 4.5, 2];
+  var cameraPosition = [controls.cameraX, controls.cameraY, controls.cameraZ];
   var up = [0, 0, 1];
   var target = [0, 0, 0];
+  var radius = 2;
 
   // Compute the camera's matrix using look at.
-  var cameraMatrix = m4.lookAt(cameraPosition, target, up);
+  //var cameraMatrix = m4.lookAt(cameraPosition, target, up);
+  var cameraMatrix = m4.yRotation(controls.cameraAngleRadians);
+  cameraMatrix = m4.translate(cameraMatrix, 0, 0, radius * 2);
 
   // Make a view matrix from the camera matrix.
   var viewMatrix = m4.inverse(cameraMatrix);
@@ -139,6 +147,8 @@ function main() {
   // Tell the shader to use texture unit 0 for diffuseMap
   gl.uniform1i(textureLocation, 0);
 
+  ////////////////////////////////
+
   function isPowerOf2(value) {
     return (value & (value - 1)) === 0;
   }
@@ -157,13 +167,32 @@ function main() {
   // Position
   document.querySelector("#gui").append(gui.domElement);
 
-  // Add a string controller.
-  var person = { name: 'Sam' };
-  gui.add(person, 'name');
+  
+  // Add controller.
+  gui.add(controls, 'cameraAngleRadians').min(0).max(360).step(1).name('Camera Angle').onChange(updateCamera);
+  gui.add(controls, 'fieldOfViewRadians').min(30).max(120).step(1).name('Field of View').onChange(updateCamera);
+
+  function updateCamera() {
+    // Compute the projection matrix
+    var projectionMatrix = m4.perspective(degToRad(controls.fieldOfViewRadians), aspect, zmin, zmax);
+
+    // Compute the camera's matrix using look at.
+    //var cameraMatrix = m4.lookAt(cameraPosition, target, up);
+    var cameraMatrix = m4.yRotation(degToRad(controls.cameraAngleRadians));
+    cameraMatrix = m4.translate(cameraMatrix, 0, 0, radius * 2);
+
+    // Make a view matrix from the camera matrix.
+    var viewMatrix = m4.inverse(cameraMatrix);
+
+    gl.uniformMatrix4fv(viewMatrixLocation, false, viewMatrix);
+    gl.uniformMatrix4fv(projectionMatrixLocation, false, projectionMatrix);
+  }
 
   // Get the starting time.
   var then = 0;
-  var radius = 1;
+
+
+  var numObjects = 3;
 
 
   requestAnimationFrame(drawScene);
@@ -184,26 +213,29 @@ function main() {
     gl.enable(gl.DEPTH_TEST);
 
     // Animate the rotation
-    modelYRotationRadians += -0.5 * deltaTime;
+    //modelYRotationRadians += -0.5 * deltaTime;
     //modelXRotationRadians += -0.0 * deltaTime;
 
     // Clear the canvas AND the depth buffer.
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     var matrix = m4.identity();
-    matrix = m4.xRotate(matrix, modelXRotationRadians);
-    matrix = m4.yRotate(matrix, modelYRotationRadians);
-    
-    var angle = 1 * Math.PI * 2 / 1;
-    var x = Math.cos(angle) * radius;
-    var z = Math.sin(angle) * radius;
-    //matrix = m4.translate(matrix, x, 0, z);
+    //matrix = m4.xRotate(matrix, modelXRotationRadians);
+    //matrix = m4.yRotate(matrix, modelYRotationRadians);
 
-    // Set the matrix.
-    gl.uniformMatrix4fv(matrixLocation, false, matrix);
+    for (let i = 0; i < numObjects; ++i) {
+      var angle = i * Math.PI * 2 / numObjects;
+      var x = Math.cos(angle) * radius;
+      var z = Math.sin(angle) * radius;
+      matrix = m4.yRotation(time);
+      matrix = m4.translate(matrix, x, 0, z);
 
-    // Draw the geometry.
-    gl.drawArrays(gl.TRIANGLES, 0, numVertices);
+      // Set the matrix.
+      gl.uniformMatrix4fv(matrixLocation, false, matrix);
+
+      // Draw the geometry.
+      gl.drawArrays(gl.TRIANGLES, 0, numVertices);
+    }
 
     requestAnimationFrame(drawScene);
   }
