@@ -195,6 +195,91 @@ function main() {
   var numObjects = 3;
 
 
+
+  // Add mouse event listener for yRotation
+  var yRotation = 0;
+  var xRotation = 0;
+  var radius = 2;
+  var isDragging = false;
+  var lastX = -1, lastY = -1;
+
+  canvas.addEventListener('mousedown', function (event) {
+    isDragging = true;
+    lastX = event.clientX;
+    lastY = event.clientY;
+  }
+  );
+
+  canvas.addEventListener('mousemove', function (event) {
+    if (isDragging) {
+      var x = event.clientX;
+      var y = event.clientY;
+      var dx = x - lastX;
+      var dy = y - lastY;
+      lastX = x;
+      lastY = y;
+
+      yRotation += dx * 0.01;
+      xRotation += dy * 0.01;
+    }
+  }
+  );
+
+  canvas.addEventListener('mouseup', function (event) {
+    isDragging = false;
+  }
+  );
+
+  // Add touch event listener for yRotation
+  canvas.addEventListener('touchstart', function (event) {
+    isDragging = true;
+    lastX = event.touches[0].clientX;
+    lastY = event.touches[0].clientY;
+  }
+  );
+
+  canvas.addEventListener('touchmove', function (event) {
+    if (isDragging) {
+      var x = event.touches[0].clientX;
+      var y = event.touches[0].clientY;
+      var dx = x - lastX;
+      var dy = y - lastY;
+      lastX = x;
+      lastY = y;
+
+      yRotation += dx * 0.01;
+      xRotation += dy * 0.01;
+    }
+  }
+  );
+
+  canvas.addEventListener('touchend', function (event) {
+    isDragging = false;
+  }
+  );
+
+  // Add keyboard event listener for yRotation with arrow keys that increase/decrease the rotation
+  window.addEventListener('keydown', function (event) {
+    switch (event.key) {
+      case 'ArrowLeft':
+        yRotation += 0.1;
+        break;
+      case 'ArrowRight':
+        yRotation -= 0.1;
+        break;
+      case 'ArrowUp':
+        xRotation += 0.1;
+        break;
+      case 'ArrowDown':
+        xRotation -= 0.1;
+        break;
+    }
+  }
+  );
+
+
+
+
   requestAnimationFrame(drawScene);
 
   // Draw the scene.
@@ -227,7 +312,7 @@ function main() {
       var angle = i * Math.PI * 2 / numObjects;
       var x = Math.cos(angle) * radius;
       var z = Math.sin(angle) * radius;
-      matrix = m4.yRotation(time);
+      matrix = m4.yRotation(yRotation);
       matrix = m4.translate(matrix, x, 0, z);
 
       // Set the matrix.
