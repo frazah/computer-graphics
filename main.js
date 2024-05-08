@@ -17,7 +17,7 @@ function main() {
   // Get A WebGL context
   /** @type {HTMLCanvasElement} */
   var canvas = document.getElementById("canvas");
-  var gl = canvas.getContext("webgl");
+  var gl = canvas.getContext("webgl2");
   if (!gl) {
     return;
   }
@@ -25,6 +25,72 @@ function main() {
 
   mesh.sourceMesh = 'resources/models/moon/moon.obj';
   LoadMesh(gl, mesh);
+
+  var skyboxProgramInfo = webglUtils.createProgramInfo(gl, ["skyboxVertexShaderSource", "skyboxFragmentShaderSource"]);
+  gl.useProgram(skyboxProgramInfo.program);
+  const arrays1 = createCubeVertices.apply(null, Array.prototype.slice.call(arguments, 1));
+  const cubeBufferInfo = webglUtils.createBufferInfoFromArrays(gl, arrays1);
+
+  const arrays2 = createXYQuadVertices.apply(null, Array.prototype.slice.call(arguments, 1));
+  const quadBufferInfo = webglUtils.createBufferInfoFromArrays(gl, arrays2);
+
+  // Create a texture.
+  var texture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_CUBE_MAP, texture);
+
+  const faceInfos = [
+    {
+      target: gl.TEXTURE_CUBE_MAP_POSITIVE_X,
+      url: 'resources/skybox/px.jpg',
+    },
+    {
+      target: gl.TEXTURE_CUBE_MAP_NEGATIVE_X,
+      url: 'resources/skybox/nx.jpg',
+    },
+    {
+      target: gl.TEXTURE_CUBE_MAP_POSITIVE_Y,
+      url: 'resources/skybox/py.jpg',
+    },
+    {
+      target: gl.TEXTURE_CUBE_MAP_NEGATIVE_Y,
+      url: 'resources/skybox/ny.jpg',
+    },
+    {
+      target: gl.TEXTURE_CUBE_MAP_POSITIVE_Z,
+      url: 'resources/skybox/pz.jpg',
+    },
+    {
+      target: gl.TEXTURE_CUBE_MAP_NEGATIVE_Z,
+      url: 'resources/skybox/nz.jpg',
+    },
+  ];
+  faceInfos.forEach((faceInfo) => {
+    const { target, url } = faceInfo;
+
+    // Upload the canvas to the cubemap face.
+    const level = 0;
+    const internalFormat = gl.RGBA;
+    const width = 1500;
+    const height = 1500;
+    const format = gl.RGBA;
+    const type = gl.UNSIGNED_BYTE;
+
+    // setup each face so it's immediately renderable
+    gl.texImage2D(target, level, internalFormat, width, height, 0, format, type, null);
+
+    // Asynchronously load an image
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.src = url;
+    image.addEventListener('load', function () {
+      // Now that the image has loaded make copy it to the texture.
+      gl.bindTexture(gl.TEXTURE_CUBE_MAP, texture);
+      gl.texImage2D(target, level, internalFormat, format, type, image);
+      gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+    });
+  });
+  gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+  gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
 
   // setup GLSL program
   var program = webglUtils.createProgramFromScripts(gl, ["3d-vertex-shader", "3d-fragment-shader"]);
@@ -63,7 +129,7 @@ function main() {
   gl.uniform3fv(gl.getUniformLocation(program, "ambient"), ambient);
   gl.uniform3fv(gl.getUniformLocation(program, "specular"), specular);
   gl.uniform3fv(gl.getUniformLocation(program, "emissive"), emissive);
-  gl.uniform3fv(gl.getUniformLocation(program, "u_lightDirection" ), lightDirection );
+  gl.uniform3fv(gl.getUniformLocation(program, "u_lightDirection"), lightDirection);
   gl.uniform3fv(gl.getUniformLocation(program, "u_ambientLight"), ambientLight);
   gl.uniform3fv(gl.getUniformLocation(program, "u_colorLight"), colorLight);
   gl.uniform1f(gl.getUniformLocation(program, "shininess"), shininess);
@@ -95,6 +161,51 @@ function main() {
   size = 2;          // 2 components per iteration
   gl.vertexAttribPointer(texcoordLocation, size, type, normalize, stride, offset);
 
+  /*
+  var skyboxProgram = webglUtils.createProgramFromScripts(gl, ["skyboxVertexShaderSource", "skyboxFragmentShaderSource"]);
+  
+  // lookup uniforms
+  var skyboxPositionLocation = gl.getAttribLocation(skyboxProgram, "a_position");
+  var skyboxLocation = gl.getUniformLocation(skyboxProgram, "u_skybox");
+  
+  
+  gl.useProgram(skyboxProgram);
+
+  
+
+  // Create a buffer for skybox positions
+  var skyboxPositionBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, skyboxPositionBuffer);
+  // Set Skybox Positions
+  var skyboxPositions = new Float32Array(
+    [
+      -1, -1,
+      1, -1,
+      -1, 1,
+      -1, 1,
+      1, -1,
+      1, 1,
+    ]);
+  gl.bufferData(gl.ARRAY_BUFFER, skyboxPositions, gl.STATIC_DRAW);
+
+    
+  // Create a vertex array object (attribute state)
+  //var vao = gl.createVertexArray();
+  // and make it the one we're currently working with
+  //gl.bindVertexArray(vao);
+    /*
+
+  // Turn on the skybox position attribute
+  gl.enableVertexAttribArray(skyboxPositionLocation);
+  gl.bindBuffer(gl.ARRAY_BUFFER, skyboxPositionBuffer);
+  // Tell the position attribute how to get data out of positionBuffer (ARRAY_BUFFER)
+  var size = 2;          // 2 components per iteration
+  var type = gl.FLOAT;   // the data is 32bit floats
+  var normalize = false; // don't normalize the data
+  var stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next position
+  var offset = 0;        // start at the beginning of the buffer
+  gl.vertexAttribPointer(skyboxPositionLocation, size, type, normalize, stride, offset);
+*/
   ////////////////////////////////
 
   var controls = {
@@ -137,7 +248,7 @@ function main() {
 
   gl.uniformMatrix4fv(viewMatrixLocation, false, viewMatrix);
   gl.uniformMatrix4fv(projectionMatrixLocation, false, projectionMatrix);
-        
+
   // set the light position
   gl.uniform3fv(lightWorldDirectionLocation, m4.normalize([-1, 3, 5]));
 
@@ -146,6 +257,23 @@ function main() {
 
   // Tell the shader to use texture unit 0 for diffuseMap
   gl.uniform1i(textureLocation, 0);
+
+  function updateCamera() {
+    
+    // Compute the projection matrix
+    projectionMatrix = m4.perspective(degToRad(controls.fieldOfViewRadians), aspect, zmin, zmax);
+
+    // Compute the camera's matrix using look at.
+    //var cameraMatrix = m4.lookAt(cameraPosition, target, up);
+    cameraMatrix = m4.yRotation(degToRad(controls.cameraAngleRadians));
+    cameraMatrix = m4.translate(cameraMatrix, 0, 0, radius * 2);
+
+    // Make a view matrix from the camera matrix.
+    viewMatrix = m4.inverse(cameraMatrix);
+
+    gl.uniformMatrix4fv(viewMatrixLocation, false, viewMatrix);
+    gl.uniformMatrix4fv(projectionMatrixLocation, false, projectionMatrix);
+  }
 
   ////////////////////////////////
 
@@ -172,21 +300,7 @@ function main() {
   gui.add(controls, 'cameraAngleRadians').min(0).max(360).step(1).name('Camera Angle').onChange(updateCamera);
   gui.add(controls, 'fieldOfViewRadians').min(30).max(120).step(1).name('Field of View').onChange(updateCamera);
 
-  function updateCamera() {
-    // Compute the projection matrix
-    var projectionMatrix = m4.perspective(degToRad(controls.fieldOfViewRadians), aspect, zmin, zmax);
 
-    // Compute the camera's matrix using look at.
-    //var cameraMatrix = m4.lookAt(cameraPosition, target, up);
-    var cameraMatrix = m4.yRotation(degToRad(controls.cameraAngleRadians));
-    cameraMatrix = m4.translate(cameraMatrix, 0, 0, radius * 2);
-
-    // Make a view matrix from the camera matrix.
-    var viewMatrix = m4.inverse(cameraMatrix);
-
-    gl.uniformMatrix4fv(viewMatrixLocation, false, viewMatrix);
-    gl.uniformMatrix4fv(projectionMatrixLocation, false, projectionMatrix);
-  }
 
   // Get the starting time.
   var then = 0;
@@ -294,19 +408,62 @@ function main() {
     // Tell WebGL how to convert from clip space to pixels
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
-    //gl.enable(gl.CULL_FACE);
+    gl.enable(gl.CULL_FACE);
     gl.enable(gl.DEPTH_TEST);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    gl.depthFunc(gl.LESS);
+    gl.useProgram(program);
+
+    // Camera 
+    var matrix = m4.identity();
+
 
     // Animate the rotation
     //modelYRotationRadians += -0.5 * deltaTime;
     //modelXRotationRadians += -0.0 * deltaTime;
 
-    // Clear the canvas AND the depth buffer.
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-    var matrix = m4.identity();
     //matrix = m4.xRotate(matrix, modelXRotationRadians);
     //matrix = m4.yRotate(matrix, modelYRotationRadians);
+
+    // Turn on the position attribute
+    gl.enableVertexAttribArray(positionLocation);
+    // Bind the position buffer.
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    // Tell the position attribute how to get data out of positionBuffer (ARRAY_BUFFER)
+    var size = 3;          // 3 components per iteration
+    var type = gl.FLOAT;   // the data is 32bit floats
+    var normalize = false; // don't normalize the data
+    var stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next position
+    var offset = 0;        // start at the beginning of the buffer
+    gl.vertexAttribPointer(positionLocation, size, type, normalize, stride, offset);
+
+    // Turn on the normal attribute
+    gl.enableVertexAttribArray(normalLocation);
+    // Bind the normal buffer.
+    gl.bindBuffer(gl.ARRAY_BUFFER, normalsBuffer);
+    gl.vertexAttribPointer(normalLocation, size, type, normalize, stride, offset);
+
+    // Turn on the texcord attribute
+    gl.enableVertexAttribArray(texcoordLocation);
+    // Bind the position buffer.
+    gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
+    // Tell the position attribute how to get data out of positionBuffer (ARRAY_BUFFER)
+    size = 2;          // 2 components per iteration
+    gl.vertexAttribPointer(texcoordLocation, size, type, normalize, stride, offset);
+
+
+    gl.uniformMatrix4fv(viewMatrixLocation, false, viewMatrix);
+    gl.uniformMatrix4fv(projectionMatrixLocation, false, projectionMatrix);
+
+    // set the light position
+    gl.uniform3fv(lightWorldDirectionLocation, m4.normalize([-1, 3, 5]));
+
+    // set the camera/view position
+    gl.uniform3fv(viewWorldPositionLocation, cameraPosition);
+
+    // Tell the shader to use texture unit 0 for diffuseMap
+    gl.uniform1i(textureLocation, 0);
 
     for (let i = 0; i < numObjects; ++i) {
       var angle = i * Math.PI * 2 / numObjects;
@@ -321,6 +478,47 @@ function main() {
       // Draw the geometry.
       gl.drawArrays(gl.TRIANGLES, 0, numVertices);
     }
+
+
+    /////////////// SKYBOX //////////////////////
+    // let our quad pass the depth test at 1.0
+    gl.depthFunc(gl.LEQUAL);
+    gl.useProgram(skyboxProgramInfo.program);
+
+    //var viewDirectionProjectionMatrix = m4.multiply(projectionMatrix, viewDirectionMatrix); 
+    //var viewDirectionProjectionInverseMatrix = m4.inverse(matrix);
+
+    var viewDirectionMatrix = m4.copy(viewMatrix);
+    viewDirectionMatrix[12] = 0;
+    viewDirectionMatrix[13] = 0;
+    viewDirectionMatrix[14] = 0;
+
+    var viewDirectionProjectionMatrix = m4.multiply(projectionMatrix, viewDirectionMatrix);
+    var viewDirectionProjectionInverseMatrix = m4.inverse(viewDirectionProjectionMatrix);
+
+    webglUtils.setBuffersAndAttributes(gl, skyboxProgramInfo, quadBufferInfo);
+    webglUtils.setUniforms(skyboxProgramInfo, {
+      u_viewDirectionProjectionInverse: viewDirectionProjectionInverseMatrix,
+      u_skybox: texture,
+    });
+    webglUtils.drawBufferInfo(gl, quadBufferInfo);
+
+
+
+    /*
+    gl.depthFunc(gl.LEQUAL);
+    gl.useProgram(skyboxProgramInfo.program);
+
+    // Clear the canvas AND the depth buffer.
+    //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    var matrix = m4.identity();
+
+    // Set the matrix.
+
+    gl.uniform1i(skyboxLocation, 0);
+    gl.drawArrays(gl.TRIANGLES, 0, numVertices);
+    */
 
     requestAnimationFrame(drawScene);
   }

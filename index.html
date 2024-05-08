@@ -46,7 +46,7 @@
     v_normal = mat3(u_world) * a_normal;
     v_texcoord = a_texcoord;
   }
-</script>
+  </script>
   <!-- fragment shader -->
   <script id="3d-fragment-shader" type="x-shader/x-fragment">
   precision highp float;
@@ -86,7 +86,37 @@
         specular * pow(specularLight, shininess),
         effectiveOpacity);
   }
-</script>
+  </script>
+
+  <script id="skyboxVertexShaderSource" type="x-shader/x-vertex">#version 300 es
+
+    in vec4 a_position;
+    out vec4 v_position;
+    void main() {
+      v_position = a_position;
+      gl_Position = a_position;
+      gl_Position.z = 1.0;
+    }
+    
+  </script>
+
+  <script id="skyboxFragmentShaderSource" type="x-shader/x-fragment">#version 300 es
+    precision highp float;
+    
+    uniform samplerCube u_skybox;
+    uniform mat4 u_viewDirectionProjectionInverse;
+    
+    in vec4 v_position;
+    
+    // we need to declare an output for the fragment shader
+    out vec4 outColor;
+    
+    void main() {
+      vec4 t = u_viewDirectionProjectionInverse * v_position;
+      outColor = texture(u_skybox, normalize(t.xyz / t.w));
+    }
+    
+  </script>
 
   <script type="text/javascript" src="libs/mesh_utils.js"></script>
   <script type="text/javascript" src="libs/glm_utils.js"></script>
