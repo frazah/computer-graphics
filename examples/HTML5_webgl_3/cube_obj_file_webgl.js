@@ -21,7 +21,7 @@ function main() {
     return;
   }
 
-  mesh.sourceMesh='data/moon/moon.obj';
+  mesh.sourceMesh='data/cube/cube.obj';
   //mesh.sourceMesh='data/chair/chair.obj';
   //mesh.sourceMesh='data/boeing/boeing_3.obj';
   //mesh.sourceMesh='data/soccerball/soccerball.obj';
