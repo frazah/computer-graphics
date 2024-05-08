@@ -159,51 +159,7 @@ function main() {
   size = 2;          // 2 components per iteration
   gl.vertexAttribPointer(texcoordLocation, size, type, normalize, stride, offset);
 
-  /*
-  var skyboxProgram = webglUtils.createProgramFromScripts(gl, ["skyboxVertexShaderSource", "skyboxFragmentShaderSource"]);
   
-  // lookup uniforms
-  var skyboxPositionLocation = gl.getAttribLocation(skyboxProgram, "a_position");
-  var skyboxLocation = gl.getUniformLocation(skyboxProgram, "u_skybox");
-  
-  
-  gl.useProgram(skyboxProgram);
-
-  
-
-  // Create a buffer for skybox positions
-  var skyboxPositionBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, skyboxPositionBuffer);
-  // Set Skybox Positions
-  var skyboxPositions = new Float32Array(
-    [
-      -1, -1,
-      1, -1,
-      -1, 1,
-      -1, 1,
-      1, -1,
-      1, 1,
-    ]);
-  gl.bufferData(gl.ARRAY_BUFFER, skyboxPositions, gl.STATIC_DRAW);
-
-    
-  // Create a vertex array object (attribute state)
-  //var vao = gl.createVertexArray();
-  // and make it the one we're currently working with
-  //gl.bindVertexArray(vao);
-    /*
-
-  // Turn on the skybox position attribute
-  gl.enableVertexAttribArray(skyboxPositionLocation);
-  gl.bindBuffer(gl.ARRAY_BUFFER, skyboxPositionBuffer);
-  // Tell the position attribute how to get data out of positionBuffer (ARRAY_BUFFER)
-  var size = 2;          // 2 components per iteration
-  var type = gl.FLOAT;   // the data is 32bit floats
-  var normalize = false; // don't normalize the data
-  var stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next position
-  var offset = 0;        // start at the beginning of the buffer
-  gl.vertexAttribPointer(skyboxPositionLocation, size, type, normalize, stride, offset);
-*/
   ////////////////////////////////
 
   var controls = {
@@ -311,7 +267,7 @@ function main() {
   // Add mouse event listener for yRotation
   var yRotation = 0;
   var xRotation = 0;
-  var radius = 2;
+  radius = 2;
   var isDragging = false;
   var lastX = -1, lastY = -1;
 
@@ -463,13 +419,18 @@ function main() {
     // Tell the shader to use texture unit 0 for diffuseMap
     gl.uniform1i(textureLocation, 0);
 
+    matrix = m4.yRotate(matrix, time);
+    matrix = m4.xRotate(matrix, time*2);
+    gl.uniformMatrix4fv(matrixLocation, false, matrix);
+    gl.drawArrays(gl.TRIANGLES, 0, numVertices);
+
     for (let i = 0; i < numObjects; ++i) {
       var angle = i * Math.PI * 2 / numObjects;
       var x = Math.cos(angle) * radius;
       var z = Math.sin(angle) * radius;
       matrix = m4.yRotation(yRotation);
       //matrix = m4.xRotation(time);
-      matrix = m4.xRotate(matrix, time);
+      //matrix = m4.xRotate(matrix, time);
       matrix = m4.translate(matrix, x, 0, z);
 
       // Set the matrix.
