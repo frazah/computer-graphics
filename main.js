@@ -28,8 +28,6 @@ function main() {
 
   var skyboxProgramInfo = webglUtils.createProgramInfo(gl, ["skyboxVertexShaderSource", "skyboxFragmentShaderSource"]);
   gl.useProgram(skyboxProgramInfo.program);
-  const arrays1 = createCubeVertices.apply(null, Array.prototype.slice.call(arguments, 1));
-  const cubeBufferInfo = webglUtils.createBufferInfoFromArrays(gl, arrays1);
 
   const arrays2 = createXYQuadVertices.apply(null, Array.prototype.slice.call(arguments, 1));
   const quadBufferInfo = webglUtils.createBufferInfoFromArrays(gl, arrays2);
@@ -306,7 +304,7 @@ function main() {
   var then = 0;
 
 
-  var numObjects = 3;
+  var numObjects = 2;
 
 
 
@@ -470,13 +468,16 @@ function main() {
       var x = Math.cos(angle) * radius;
       var z = Math.sin(angle) * radius;
       matrix = m4.yRotation(yRotation);
+      //matrix = m4.xRotation(time);
+      matrix = m4.xRotate(matrix, time);
       matrix = m4.translate(matrix, x, 0, z);
 
       // Set the matrix.
       gl.uniformMatrix4fv(matrixLocation, false, matrix);
 
       // Draw the geometry.
-      gl.drawArrays(gl.TRIANGLES, 0, numVertices);
+      if (i != numObjects - 1)
+        gl.drawArrays(gl.TRIANGLES, 0, numVertices);
     }
 
 
