@@ -164,8 +164,8 @@ function main() {
   size = 2;          // 2 components per iteration
   gl.vertexAttribPointer(texcoordLocation, size, type, normalize, stride, offset);
 
-  
-  ////////////////////////////////
+
+  /////////////// CAMERA /////////////////
 
   var controls = {
     enable: true,
@@ -218,7 +218,7 @@ function main() {
   gl.uniform1i(textureLocation, 0);
 
   function updateCamera() {
-    
+
     // Compute the projection matrix
     projectionMatrix = m4.perspective(degToRad(controls.fieldOfViewRadians), aspect, zmin, zmax);
 
@@ -234,8 +234,6 @@ function main() {
     gl.uniformMatrix4fv(projectionMatrixLocation, false, projectionMatrix);
   }
 
-  ////////////////////////////////
-
   function isPowerOf2(value) {
     return (value & (value - 1)) === 0;
   }
@@ -248,26 +246,20 @@ function main() {
     return d * Math.PI / 180;
   }
 
+  //////////////// USER INTERFACE ////////////////
+
   // Creating a GUI
   var gui = new dat.GUI({ autoPlace: false });
 
   // Position
   document.querySelector("#gui").append(gui.domElement);
 
-  
+
   // Add controller.
   gui.add(controls, 'cameraAngleRadians').min(0).max(360).step(1).name('Camera Angle').onChange(updateCamera);
   gui.add(controls, 'fieldOfViewRadians').min(30).max(120).step(1).name('Field of View').onChange(updateCamera);
 
-
-
-  // Get the starting time.
-  var then = 0;
-
-
-  var numObjects = 2;
-
-
+  /////////////////// MOUSE AND KEYBOARD EVENTS //////////////////////
 
   // Add mouse event listener for yRotation
   var yRotation = 0;
@@ -350,10 +342,17 @@ function main() {
   }
   );
 
+  /////////////// RENDERING //////////////////////
 
+  // Get the starting time.
+  var then = 0;
+
+  var numObjects = 2;
 
 
   requestAnimationFrame(drawScene);
+
+  /////////////////////////////////////////
 
   // Draw the scene.
   function drawScene(time) {
