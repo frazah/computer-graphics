@@ -23,8 +23,7 @@ function main() {
   }
   webglUtils.resizeCanvasToDisplaySize(gl.canvas);
 
-  mesh.sourceMesh = 'resources/models/moon/moon.obj';
-  LoadMesh(gl, mesh);
+  ///////////////// SKYBOX PROGRAM //////////////////////
 
   var skyboxProgramInfo = webglUtils.createProgramInfo(gl, ["skyboxVertexShaderSource", "skyboxFragmentShaderSource"]);
   gl.useProgram(skyboxProgramInfo.program);
@@ -90,8 +89,14 @@ function main() {
   gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
   gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
 
+  ///////////////// POLYGONS PROGRAM //////////////////////
+
+  mesh.sourceMesh = 'resources/models/moon/moon.obj';
+  LoadMesh(gl, mesh);
+
   // setup GLSL program
-  var program = webglUtils.createProgramFromScripts(gl, ["3d-vertex-shader", "3d-fragment-shader"]);
+  var programInfo = webglUtils.createProgramInfo(gl, ["3d-vertex-shader", "3d-fragment-shader"]);
+  var program = programInfo.program;
   // Tell it to use our program (pair of shaders)
   gl.useProgram(program);
 
@@ -420,7 +425,7 @@ function main() {
     gl.uniform1i(textureLocation, 0);
 
     matrix = m4.yRotate(matrix, time);
-    matrix = m4.xRotate(matrix, time*2);
+    matrix = m4.xRotate(matrix, time * 2);
     gl.uniformMatrix4fv(matrixLocation, false, matrix);
     gl.drawArrays(gl.TRIANGLES, 0, numVertices);
 
