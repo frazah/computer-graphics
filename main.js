@@ -401,14 +401,6 @@ function main() {
     // Camera 
     var matrix = m4.identity();
 
-
-    // Animate the rotation
-    //modelYRotationRadians += -0.5 * deltaTime;
-    //modelXRotationRadians += -0.0 * deltaTime;
-
-    //matrix = m4.xRotate(matrix, modelXRotationRadians);
-    //matrix = m4.yRotate(matrix, modelYRotationRadians);
-
     // Turn on the position attribute
     gl.enableVertexAttribArray(positionLocation);
     // Bind the position buffer.
@@ -456,7 +448,7 @@ function main() {
     gl.uniform1i(textureLocation, textureUnit);
 
     matrix = m4.yRotate(matrix, time);
-    //matrix = m4.xRotate(matrix, time * 2);
+
     gl.uniformMatrix4fv(matrixLocation, false, matrix);
     gl.drawArrays(gl.TRIANGLES, 0, numVertices);
 
@@ -465,8 +457,7 @@ function main() {
       var x = Math.cos(angle) * radius;
       var z = Math.sin(angle) * radius;
       matrix = m4.yRotation(yRotation);
-      //matrix = m4.xRotation(time);
-      //matrix = m4.xRotate(matrix, time);
+
       matrix = m4.translate(matrix, x, 0, z);
       matrix = m4.scale(matrix, 0.5, 0.5, 0.5);
 
@@ -489,9 +480,6 @@ function main() {
     gl.depthFunc(gl.LEQUAL);
     gl.useProgram(skyboxProgramInfo.program);
 
-    //var viewDirectionProjectionMatrix = m4.multiply(projectionMatrix, viewDirectionMatrix); 
-    //var viewDirectionProjectionInverseMatrix = m4.inverse(matrix);
-
     var viewDirectionMatrix = m4.copy(viewMatrix);
     viewDirectionMatrix[12] = 0;
     viewDirectionMatrix[13] = 0;
@@ -507,22 +495,6 @@ function main() {
     });
     webglUtils.drawBufferInfo(gl, quadBufferInfo);
 
-
-
-    /*
-    gl.depthFunc(gl.LEQUAL);
-    gl.useProgram(skyboxProgramInfo.program);
-
-    // Clear the canvas AND the depth buffer.
-    //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-    var matrix = m4.identity();
-
-    // Set the matrix.
-
-    gl.uniform1i(skyboxLocation, 0);
-    gl.drawArrays(gl.TRIANGLES, 0, numVertices);
-    */
 
     requestAnimationFrame(drawScene);
   }
