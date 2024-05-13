@@ -172,7 +172,7 @@ function main() {
     cameraX: 4.5,
     cameraY: 4.5,
     cameraZ: 2,
-    cameraAngleRadians: degToRad(320),
+    cameraAngleRadians: degToRad(0),
     fieldOfViewRadians: degToRad(90),
     numObjects: 1,
     showFace: false
