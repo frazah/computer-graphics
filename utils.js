@@ -1,5 +1,6 @@
 //Funzione che carica una texture
 function loadTexture(gl, path, fileName) {
+    gl.activeTexture(gl.TEXTURE0 + textureUnit);
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
 

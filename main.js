@@ -13,6 +13,9 @@ var emissive;  //Ke
 var shininess; //Ns
 var opacity;   //Ni
 
+var textureUnit = 0;
+var showFace = false;
+
 function main() {
   // Get A WebGL context
   /** @type {HTMLCanvasElement} */
@@ -164,17 +167,34 @@ function main() {
   size = 2;          // 2 components per iteration
   gl.vertexAttribPointer(texcoordLocation, size, type, normalize, stride, offset);
 
-
-  /////////////// CAMERA /////////////////
-
   var controls = {
     enable: true,
     cameraX: 4.5,
     cameraY: 4.5,
     cameraZ: 2,
-    cameraAngleRadians: degToRad(0),
+    cameraAngleRadians: degToRad(320),
     fieldOfViewRadians: degToRad(90),
+    numObjects: 1,
+    showFace: false
   };
+
+  // Load second texture
+  textureUnit = 1;
+  var faceTexture = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE0 + textureUnit);
+
+  // bind to the TEXTURE_2D bind point of texture unit 0
+  gl.bindTexture(gl.TEXTURE_2D, faceTexture);
+
+  var faceImage = new Image();
+  if (controls.showFace) {
+    faceImage.src = 'resources/textures/id.png';
+  } else {
+    faceImage.src = 'resources/textures/earth.jpg';
+  }
+
+  /////////////// CAMERA /////////////////
+
 
   var modelXRotationRadians = degToRad(0);
   var modelYRotationRadians = degToRad(0);
@@ -258,6 +278,14 @@ function main() {
   // Add controller.
   gui.add(controls, 'cameraAngleRadians').min(0).max(360).step(1).name('Camera Angle').onChange(updateCamera);
   gui.add(controls, 'fieldOfViewRadians').min(30).max(120).step(1).name('Field of View').onChange(updateCamera);
+  gui.add(controls, 'numObjects').min(1).max(10).step(1).name('Number of Objects');
+  gui.add(controls, 'showFace').name('Show Face').onChange(function () {
+    if (controls.showFace) {
+      faceImage.src = 'resources/textures/id.jpg';
+    } else {
+      faceImage.src = 'resources/textures/earth.jpg';
+    }
+  });
 
   /////////////////// MOUSE AND KEYBOARD EVENTS //////////////////////
 
@@ -347,9 +375,6 @@ function main() {
   // Get the starting time.
   var then = 0;
 
-  var numObjects = 2;
-
-
   requestAnimationFrame(drawScene);
 
   /////////////////////////////////////////
@@ -420,16 +445,23 @@ function main() {
     // set the camera/view position
     gl.uniform3fv(viewWorldPositionLocation, cameraPosition);
 
+    textureUnit = 1;
+    gl.activeTexture(gl.TEXTURE0 + textureUnit);
+
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, faceImage);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.generateMipmap(gl.TEXTURE_2D);
+
     // Tell the shader to use texture unit 0 for diffuseMap
-    gl.uniform1i(textureLocation, 0);
+    gl.uniform1i(textureLocation, textureUnit);
 
     matrix = m4.yRotate(matrix, time);
     //matrix = m4.xRotate(matrix, time * 2);
     gl.uniformMatrix4fv(matrixLocation, false, matrix);
     gl.drawArrays(gl.TRIANGLES, 0, numVertices);
 
-    for (let i = 0; i < numObjects; ++i) {
-      var angle = i * Math.PI * 2 / numObjects;
+    for (let i = 0; i < controls.numObjects; ++i) {
+      var angle = i * Math.PI * 2 / controls.numObjects;
       var x = Math.cos(angle) * radius;
       var z = Math.sin(angle) * radius;
       matrix = m4.yRotation(yRotation);
@@ -438,11 +470,16 @@ function main() {
       matrix = m4.translate(matrix, x, 0, z);
       matrix = m4.scale(matrix, 0.5, 0.5, 0.5);
 
+      // Tell the shader to use texture unit 0 for diffuseMap
+      textureUnit = 0;
+      gl.activeTexture(gl.TEXTURE0 + textureUnit);
+      gl.uniform1i(textureLocation, textureUnit);
+
       // Set the matrix.
       gl.uniformMatrix4fv(matrixLocation, false, matrix);
 
       // Draw the geometry.
-      if (i != numObjects - 1)
+      //if (i != controls.numObjects - 1)
         gl.drawArrays(gl.TRIANGLES, 0, numVertices);
     }
 
