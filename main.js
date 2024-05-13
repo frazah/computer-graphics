@@ -424,7 +424,7 @@ function main() {
     gl.uniform1i(textureLocation, 0);
 
     matrix = m4.yRotate(matrix, time);
-    matrix = m4.xRotate(matrix, time * 2);
+    //matrix = m4.xRotate(matrix, time * 2);
     gl.uniformMatrix4fv(matrixLocation, false, matrix);
     gl.drawArrays(gl.TRIANGLES, 0, numVertices);
 
