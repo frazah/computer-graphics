@@ -32,8 +32,8 @@ function main() {
   const quadBufferInfo = webglUtils.createBufferInfoFromArrays(gl, arrays2);
 
   // Create a texture.
-  var texture = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_CUBE_MAP, texture);
+  var skyboxTexture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_CUBE_MAP, skyboxTexture);
 
   const faceInfos = [
     {
@@ -81,7 +81,7 @@ function main() {
     image.src = url;
     image.addEventListener('load', function () {
       // Now that the image has loaded make copy it to the texture.
-      gl.bindTexture(gl.TEXTURE_CUBE_MAP, texture);
+      gl.bindTexture(gl.TEXTURE_CUBE_MAP, skyboxTexture);
       gl.texImage2D(target, level, internalFormat, format, type, image);
       gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
     });
@@ -436,6 +436,7 @@ function main() {
       //matrix = m4.xRotation(time);
       //matrix = m4.xRotate(matrix, time);
       matrix = m4.translate(matrix, x, 0, z);
+      matrix = m4.scale(matrix, 0.5, 0.5, 0.5);
 
       // Set the matrix.
       gl.uniformMatrix4fv(matrixLocation, false, matrix);
@@ -465,7 +466,7 @@ function main() {
     webglUtils.setBuffersAndAttributes(gl, skyboxProgramInfo, quadBufferInfo);
     webglUtils.setUniforms(skyboxProgramInfo, {
       u_viewDirectionProjectionInverse: viewDirectionProjectionInverseMatrix,
-      u_skybox: texture,
+      u_skybox: skyboxTexture,
     });
     webglUtils.drawBufferInfo(gl, quadBufferInfo);
 
