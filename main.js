@@ -275,9 +275,9 @@ function main() {
 
 
   // Add controller.
-  gui.add(controls, 'cameraAngleRadians').min(0).max(360).step(1).name('Camera Angle').onChange(updateCamera);
   gui.add(controls, 'fieldOfViewRadians').min(30).max(120).step(1).name('Field of View').onChange(updateCamera);
-  gui.add(controls, 'numObjects').min(1).max(10).step(1).name('Number of Objects');
+  gui.add(controls, 'cameraAngleRadians').min(0).max(360).step(1).name('Camera Angle').onChange(updateCamera);
+  gui.add(controls, 'numObjects').min(1).max(10).step(1).name('Moon number');
   gui.add(controls, 'showFace').name('Show Face').onChange(function () {
     if (controls.showFace) {
       faceImage.src = 'resources/textures/id.jpg';
