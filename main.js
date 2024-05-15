@@ -14,7 +14,6 @@ var shininess; //Ns
 var opacity;   //Ni
 
 var textureUnit = 0;
-var showFace = false;
 
 function main() {
   // Get A WebGL context
