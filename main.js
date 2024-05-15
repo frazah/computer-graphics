@@ -458,7 +458,7 @@ function main() {
       matrix = m4.yRotation(yRotation);
 
       matrix = m4.translate(matrix, x, 0, z);
-      matrix = m4.scale(matrix, 0.5, 0.5, 0.5);
+      matrix = m4.scale(matrix, 0.4, 0.4, 0.4);
 
       // Tell the shader to use texture unit 0 for diffuseMap
       textureUnit = 0;
