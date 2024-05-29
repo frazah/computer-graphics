@@ -1,5 +1,6 @@
 "use strict";
 
+// Mesh and material variables (to be filled by LoadMesh function)
 var mesh = new Array();
 var positions = [];
 var normals = [];
@@ -13,6 +14,7 @@ var emissive;  //Ke
 var shininess; //Ns
 var opacity;   //Ni
 
+// Index for the texture unit to activate
 var textureUnit = 0;
 
 function main() {
@@ -30,6 +32,7 @@ function main() {
   var skyboxProgramInfo = webglUtils.createProgramInfo(gl, ["skyboxVertexShaderSource", "skyboxFragmentShaderSource"]);
   gl.useProgram(skyboxProgramInfo.program);
 
+  // Create the geometry for a square
   const arrays2 = createXYQuadVertices.apply(null, Array.prototype.slice.call(arguments, 1));
   const quadBufferInfo = webglUtils.createBufferInfoFromArrays(gl, arrays2);
 
@@ -63,6 +66,8 @@ function main() {
       url: 'resources/skybox/nz.jpg',
     },
   ];
+
+  // Asynchronously load an image and copy it to the texture
   faceInfos.forEach((faceInfo) => {
     const { target, url } = faceInfo;
 
@@ -127,9 +132,12 @@ function main() {
   // Set Texcoords
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texcoords), gl.STATIC_DRAW);
 
+
+  // Light properties 
   var ambientLight = [0.2, 0.2, 0.2];
   var colorLight = [1.0, 1.0, 1.0];
 
+  // Sphere material properties
   gl.uniform3fv(gl.getUniformLocation(program, "diffuse"), diffuse);
   gl.uniform3fv(gl.getUniformLocation(program, "ambient"), ambient);
   gl.uniform3fv(gl.getUniformLocation(program, "specular"), specular);
@@ -198,7 +206,7 @@ function main() {
   var modelXRotationRadians = degToRad(0);
   var modelYRotationRadians = degToRad(0);
 
-  // Compute the projection matrix
+  // Compute the projection matrix (perspective matrix)
   var aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
   var zmin = 1;
   var zmax = 500;
@@ -209,12 +217,16 @@ function main() {
   var target = [0, 0, 0];
   var radius = 2;
 
-  // Compute the camera's matrix using look at.
+  // Compute the camera's matrix
   //var cameraMatrix = m4.lookAt(cameraPosition, target, up);
+
+  // Rotate the camera around Y
   var cameraMatrix = m4.yRotation(controls.cameraAngleRadians);
+
+  // Translate the camera back along Z
   cameraMatrix = m4.translate(cameraMatrix, 0, 0, radius * 2);
 
-  // Make a view matrix from the camera matrix.
+  // Make a view matrix from the camera matrix by taking the inverse of the camera matrix
   var viewMatrix = m4.inverse(cameraMatrix);
 
   var matrixLocation = gl.getUniformLocation(program, "u_world");
@@ -227,13 +239,13 @@ function main() {
   gl.uniformMatrix4fv(viewMatrixLocation, false, viewMatrix);
   gl.uniformMatrix4fv(projectionMatrixLocation, false, projectionMatrix);
 
-  // set the light position
+  // set the light position by normalizing the vector from the light to the origin
   gl.uniform3fv(lightWorldDirectionLocation, m4.normalize([-1, 3, 5]));
 
   // set the camera/view position
   gl.uniform3fv(viewWorldPositionLocation, cameraPosition);
 
-  // Tell the shader to use texture unit 0 for diffuseMap
+  // Tell the shader to use texture unit 0 for diffuseMap 
   gl.uniform1i(textureLocation, 0);
 
   function updateCamera() {
@@ -394,10 +406,11 @@ function main() {
     gl.enable(gl.DEPTH_TEST);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+    // depth function to show the closest objects in front of the farthest objects 
     gl.depthFunc(gl.LESS);
     gl.useProgram(program);
 
-    // Camera 
+    // Object matrix for the sphere
     var matrix = m4.identity();
 
     // Turn on the position attribute
@@ -479,12 +492,16 @@ function main() {
     gl.depthFunc(gl.LEQUAL);
     gl.useProgram(skyboxProgramInfo.program);
 
+    // Compute the matrix for the view direction matrix. 
     var viewDirectionMatrix = m4.copy(viewMatrix);
     viewDirectionMatrix[12] = 0;
     viewDirectionMatrix[13] = 0;
     viewDirectionMatrix[14] = 0;
 
+    // Compute the matrix for the view direction projection.
     var viewDirectionProjectionMatrix = m4.multiply(projectionMatrix, viewDirectionMatrix);
+
+    // Compute the matrix for the view direction projection inverse. This matrix will be used to transform the skybox vertices. 
     var viewDirectionProjectionInverseMatrix = m4.inverse(viewDirectionProjectionMatrix);
 
     webglUtils.setBuffersAndAttributes(gl, skyboxProgramInfo, quadBufferInfo);
