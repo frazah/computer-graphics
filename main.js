@@ -137,7 +137,7 @@ function main() {
   var ambientLight = [0.2, 0.2, 0.2];
   var colorLight = [1.0, 1.0, 1.0];
 
-  // Sphere material properties
+  // Sphere light and material properties
   gl.uniform3fv(gl.getUniformLocation(program, "diffuse"), diffuse);
   gl.uniform3fv(gl.getUniformLocation(program, "ambient"), ambient);
   gl.uniform3fv(gl.getUniformLocation(program, "specular"), specular);
@@ -150,7 +150,7 @@ function main() {
 
   // Turn on the position attribute
   gl.enableVertexAttribArray(positionLocation);
-  // Bind the position buffer.
+  // Bind the position buffer to the position attribute
   gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
   // Tell the position attribute how to get data out of positionBuffer (ARRAY_BUFFER)
   var size = 3;          // 3 components per iteration
@@ -162,13 +162,13 @@ function main() {
 
   // Turn on the normal attribute
   gl.enableVertexAttribArray(normalLocation);
-  // Bind the normal buffer.
+  // Bind the normal buffer to the normal attribute
   gl.bindBuffer(gl.ARRAY_BUFFER, normalsBuffer);
   gl.vertexAttribPointer(normalLocation, size, type, normalize, stride, offset);
 
   // Turn on the texcord attribute
   gl.enableVertexAttribArray(texcoordLocation);
-  // Bind the position buffer.
+  // Bind the position buffer to the texcoord attribute
   gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
   // Tell the position attribute how to get data out of positionBuffer (ARRAY_BUFFER)
   size = 2;          // 2 components per iteration
@@ -415,7 +415,7 @@ function main() {
 
     // Turn on the position attribute
     gl.enableVertexAttribArray(positionLocation);
-    // Bind the position buffer.
+    // Bind the position buffer to the position attribute
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
     // Tell the position attribute how to get data out of positionBuffer (ARRAY_BUFFER)
     var size = 3;          // 3 components per iteration
@@ -427,13 +427,13 @@ function main() {
 
     // Turn on the normal attribute
     gl.enableVertexAttribArray(normalLocation);
-    // Bind the normal buffer.
+    // Bind the normal buffer to the normal attribute
     gl.bindBuffer(gl.ARRAY_BUFFER, normalsBuffer);
     gl.vertexAttribPointer(normalLocation, size, type, normalize, stride, offset);
 
     // Turn on the texcord attribute
     gl.enableVertexAttribArray(texcoordLocation);
-    // Bind the position buffer.
+    // Bind the position buffer to the texcoord attribute
     gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
     // Tell the position attribute how to get data out of positionBuffer (ARRAY_BUFFER)
     size = 2;          // 2 components per iteration
